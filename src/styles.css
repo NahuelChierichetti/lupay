@@ -65,6 +65,9 @@ body {
 
 .content {
   padding: 1rem;
+  background: #f7f8f6;
+  min-height: calc(100dvh - 4.5rem);
+  height: auto;
 }
 
 .stack {

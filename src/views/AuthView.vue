@@ -1,11 +1,12 @@
 <script setup>
 import { reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../store/useAuthStore'
 import { getOrCreateProfile } from '../services/profileService'
 import { useToast } from '../composables/useToast'
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
 const { add: addToast } = useToast()
 const mode = ref('login')
@@ -62,16 +63,21 @@ async function submit() {
   auth.error = ''
 
   try {
+    const redirectTo = route.query.redirect || sessionStorage.getItem('pendingInviteToken')
+      ? (route.query.redirect || `/invite?token=${sessionStorage.getItem('pendingInviteToken')}`)
+      : '/'
+    sessionStorage.removeItem('pendingInviteToken')
+
     if (mode.value === 'login') {
       await auth.login(form.email, form.password)
       try { await getOrCreateProfile() } catch (_) {}
       addToast('Sesión iniciada correctamente', 'success')
-      router.push('/')
+      router.push(redirectTo)
     } else {
       await auth.register(form.email, form.password, form.fullName)
       try { await getOrCreateProfile() } catch (_) {}
       addToast('Cuenta creada exitosamente. ¡Bienvenido!', 'success')
-      router.push('/')
+      router.push(redirectTo)
     }
   } catch (err) {
     const message = auth.error || err?.message || 'Ocurrió un error inesperado'
@@ -92,9 +98,9 @@ async function submit() {
           <polyline points="16 7 22 7 22 13"/>
         </svg>
       </div>
-      <h1 class="auth-app-name">Platup</h1>
+      <h1 class="auth-app-name">Lupay</h1>
       <p class="auth-tagline">
-        {{ mode === 'login' ? 'Gestiona tus finanzas con Platup' : 'Crea tu espacio financiero' }}
+        {{ mode === 'login' ? 'Gestiona tus finanzas con Lupay' : 'Crea tu espacio financiero' }}
       </p>
     </header>
 

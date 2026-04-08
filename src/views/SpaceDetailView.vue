@@ -53,6 +53,20 @@ function statusInfo(s) { return STATUS_MAP[s] || { label: s, class: '' } }
 function formatDate(d) { return d ? dayjs(d).format('DD/MM/YYYY') : '—' }
 function initials(name) { return (name || '?')[0].toUpperCase() }
 
+function avatarColor(user) {
+  const uniqueUserId = user?.user_id || user?.id || user?.email || user?.full_name || ''
+  const text = `${spaceId || 'personal'}:${String(uniqueUserId)}`
+  let hash = 0
+  for (let i = 0; i < text.length; i += 1) {
+    hash = text.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  const safeHash = Math.abs(hash)
+  const hue = safeHash % 360
+  const saturation = 55 + (safeHash % 10)
+  const lightness = 42 + (safeHash % 8)
+  return `hsl(${hue}, ${saturation}%, ${lightness}%)`
+}
+
 // ── Load ──────────────────────────────────────────────────────────────────────
 onMounted(async () => {
   loading.value = true
@@ -297,7 +311,7 @@ const ROLE_LABEL = { editor: 'Editor', viewer: 'Visor' }
         <!-- Member list -->
         <ul class="member-list">
           <li class="member-row owner-row">
-            <div class="member-avatar owner-avatar">{{ initials(auth.user?.email || '') }}</div>
+            <div class="member-avatar owner-avatar" :style="{ backgroundColor: avatarColor(auth.user) }">{{ initials(auth.user?.email || '') }}</div>
             <div class="member-info">
               <span class="member-name">{{ auth.user?.user_metadata?.full_name || auth.user?.email }}</span>
               <span class="member-email">{{ auth.user?.email }}</span>
@@ -305,7 +319,7 @@ const ROLE_LABEL = { editor: 'Editor', viewer: 'Visor' }
             <span class="badge-role">Dueño</span>
           </li>
           <li v-for="m in members" :key="m.id" class="member-row">
-            <div class="member-avatar">{{ initials(m.email) }}</div>
+            <div class="member-avatar" :style="{ backgroundColor: avatarColor(m) }">{{ initials(m.email) }}</div>
             <div class="member-info">
               <span class="member-name">{{ m.full_name || m.email }}</span>
               <span class="member-email">{{ m.email }}</span>
@@ -501,11 +515,10 @@ const ROLE_LABEL = { editor: 'Editor', viewer: 'Visor' }
 
 .member-avatar {
   width: 36px; height: 36px; border-radius: 50%;
-  background: #dcfce7; color: #166534;
+  background: #dcfce7; color: #fff;
   font-size: 0.875rem; font-weight: 600;
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
-.owner-avatar { background: #fef9c3; color: #854d0e; }
 
 .member-info { flex: 1; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .member-name { font-size: 0.9375rem; font-weight: 500; color: #1a1a1a; }

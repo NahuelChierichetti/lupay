@@ -1,25 +1,65 @@
 <script setup>
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useFinanceStore } from '../../store/useFinanceStore'
 import { useAuthStore } from '../../store/useAuthStore'
+import { useNotificationStore } from '../../store/useNotificationStore'
+import { useSpaceStore } from '../../store/useSpaceStore'
+import MonthSelector from '../ui/MonthSelector.vue'
+import NotificationBell from '../ui/NotificationBell.vue'
 
 const store = useFinanceStore()
 const auth = useAuthStore()
+const notifStore = useNotificationStore()
+const spaceStore = useSpaceStore()
 const route = useRoute()
 const router = useRouter()
 
+// Nav items scoped to a space context (excluding Espacios management link from main nav)
 const navItems = [
-  { to: '/gastos', name: 'gastos', label: 'Gastos' },
-  { to: '/planificacion', name: 'planificacion', label: 'Estadisticas' },
-  { to: '/objetivos', name: 'objetivos', label: 'Objetivos' },
-  { to: '/configuracion', name: 'configuracion', label: 'Configuracion' },
-  { to: '/perfil', name: 'perfil', label: 'Mi Perfil' },
+  { to: '/gastos',        name: 'gastos',        label: 'Gastos' },
+  { to: '/planificacion', name: 'planificacion',  label: 'Estadisticas' },
+  { to: '/objetivos',     name: 'objetivos',      label: 'Objetivos' },
+  { to: '/configuracion', name: 'configuracion',  label: 'Configuracion' },
 ]
 
-onMounted(() => {
-  store.bootstrap()
+const showSpaceMenu = ref(false)
+
+async function syncWorkspaceState() {
+  await spaceStore.bootstrap()
+
+  if (!spaceStore.currentSpaceId) {
+    // No space selected — still bootstrap notifications so the bell works
+    // (the invitee may receive an invite before creating their own space)
+    await notifStore.bootstrap(auth.user?.id, [], auth.user?.email)
+    if (route.name !== 'espacios' && route.name !== 'perfil') {
+      router.push({ name: 'espacios' })
+    }
+    return
+  }
+
+  await store.bootstrap(spaceStore.currentSpaceId)
+  await notifStore.bootstrap(auth.user?.id, store.expenses, auth.user?.email)
+}
+
+onMounted(async () => {
+  await syncWorkspaceState()
+  window.addEventListener('focus', syncWorkspaceState)
 })
+
+onUnmounted(() => {
+  window.removeEventListener('focus', syncWorkspaceState)
+})
+
+async function selectSpace(spaceId) {
+  showSpaceMenu.value = false
+  spaceStore.setSpace(spaceId)
+  if (spaceId) {
+    await store.bootstrap(spaceId)
+    await notifStore.bootstrap(auth.user?.id, store.expenses, auth.user?.email)
+    if (route.name !== 'gastos') router.push({ name: 'gastos' })
+  }
+}
 
 const displayName = computed(() => {
   return auth.user?.user_metadata?.full_name || auth.user?.email?.split('@')[0] || 'Usuario'
@@ -31,6 +71,9 @@ const userInitial = computed(() => {
 })
 
 async function logout() {
+  // Tear down Realtime subscription and clear notification state
+  // before ending the session to prevent data leaks between users
+  notifStore.teardown()
   await auth.logout()
   router.push('/auth')
 }
@@ -47,40 +90,78 @@ async function logout() {
             <polyline points="17 6 23 6 23 12"/>
           </svg>
         </div>
-        <span class="logo-text">Platup</span>
+        <span class="logo-text">Lupay</span>
+      </div>
+
+      <!-- Space switcher: only shown when at least one space exists -->
+      <div v-if="spaceStore.spaces.length > 0" class="space-switcher">
+        <button class="space-btn" @click="showSpaceMenu = !showSpaceMenu">
+          <div class="space-dot" :style="{ background: spaceStore.currentSpace?.color || '#6b7280' }">
+            {{ spaceStore.currentSpace ? spaceStore.currentSpace.name[0].toUpperCase() : '?' }}
+          </div>
+          <span class="space-label">{{ spaceStore.currentSpace?.name || 'Seleccionar espacio' }}</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
+
+        <div v-if="showSpaceMenu" class="space-menu">
+          <button v-for="s in spaceStore.spaces" :key="s.id"
+            class="space-option" :class="{ selected: spaceStore.currentSpaceId === s.id }"
+            @click="selectSpace(s.id)">
+            <div class="space-dot" :style="{ background: s.color }">{{ s.name[0].toUpperCase() }}</div>
+            <span>{{ s.name }}</span>
+            <span v-if="s.isOwner" class="space-option-badge">Tuyo</span>
+          </button>
+          <div class="space-menu-divider" />
+          <RouterLink to="/espacios" class="space-manage-link" @click="showSpaceMenu = false">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Gestionar espacios
+          </RouterLink>
+        </div>
       </div>
 
       <!-- Navigation -->
       <nav class="side-nav">
-        <RouterLink v-for="item in navItems" :key="item.to" :to="item.to" :class="{ active: route.name === item.name }">
-          <!-- Gastos icon -->
-          <svg v-if="item.name === 'gastos'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="2" y="5" width="20" height="14" rx="2"/>
-            <line x1="2" y1="10" x2="22" y2="10"/>
+        <!-- Space-scoped views: only accessible when a space is selected -->
+        <template v-if="spaceStore.currentSpaceId">
+          <RouterLink v-for="item in navItems" :key="item.to" :to="item.to" :class="{ active: route.name === item.name }">
+            <!-- Gastos icon -->
+            <svg v-if="item.name === 'gastos'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>
+            </svg>
+            <!-- Estadisticas icon -->
+            <svg v-if="item.name === 'planificacion'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+            </svg>
+            <!-- Objetivos icon -->
+            <svg v-if="item.name === 'objetivos'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>
+            </svg>
+            <!-- Configuracion icon -->
+            <svg v-if="item.name === 'configuracion'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+            {{ item.label }}
+          </RouterLink>
+          <div class="nav-divider" />
+        </template>
+
+        <!-- Gestionar espacios: always visible -->
+        <RouterLink to="/espacios" :class="{ active: route.name === 'espacios' || route.name === 'espacio' }">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
           </svg>
-          <!-- Estadisticas icon -->
-          <svg v-if="item.name === 'planificacion'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="20" x2="18" y2="10"/>
-            <line x1="12" y1="20" x2="12" y2="4"/>
-            <line x1="6" y1="20" x2="6" y2="14"/>
+          Espacios
+        </RouterLink>
+
+        <!-- Mi Perfil: always global -->
+        <RouterLink to="/perfil" :class="{ active: route.name === 'perfil' }">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
           </svg>
-          <!-- Objetivos icon -->
-          <svg v-if="item.name === 'objetivos'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"/>
-            <circle cx="12" cy="12" r="6"/>
-            <circle cx="12" cy="12" r="2"/>
-          </svg>
-          <!-- Configuracion icon -->
-          <svg v-if="item.name === 'configuracion'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="3"/>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-          </svg>
-          <!-- Mi Perfil icon -->
-          <svg v-if="item.name === 'perfil'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-            <circle cx="12" cy="7" r="4"/>
-          </svg>
-          {{ item.label }}
+          Mi Perfil
         </RouterLink>
       </nav>
 
@@ -106,8 +187,9 @@ async function logout() {
 
     <div class="workspace">
       <header class="topbar">
-        <div class="top-actions">
-          <input v-model="store.month" type="month" />
+        <MonthSelector v-model="store.month" />
+        <div class="topbar-right">
+          <NotificationBell />
         </div>
       </header>
       <main class="content">
@@ -284,22 +366,188 @@ async function logout() {
 .topbar {
   background: #fff;
   border-bottom: 1px solid #dae2c6;
-  padding: 0.75rem 1rem;
+  padding: 0.6rem 1.25rem;
   display: flex;
-  justify-content: flex-end;
   align-items: center;
+  justify-content: space-between;
   position: sticky;
   top: 0;
   z-index: 10;
 }
 
-.top-actions {
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Space switcher */
+.space-switcher {
+  position: relative;
+  margin-bottom: 1.25rem;
+}
+
+.space-btn {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  width: 100%;
+  background: rgba(255,255,255,0.5);
+  border: 1px solid #c8d8cc;
+  border-radius: 10px;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #0D0D0D;
+  transition: background 0.15s;
 }
 
-.top-actions input {
-  width: auto;
+.space-btn:hover {
+  background: rgba(255,255,255,0.8);
+}
+
+.space-btn svg {
+  margin-left: auto;
+  color: #6b7280;
+  flex-shrink: 0;
+}
+
+.space-dot {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.space-label {
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.space-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid #dae2c6;
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+  z-index: 50;
+  padding: 0.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.space-menu-divider {
+  height: 1px;
+  background: #dae2c6;
+  margin: 0.3rem 0;
+}
+
+.space-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-radius: 7px;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s;
+}
+
+.space-option:hover {
+  background: #f1f5f0;
+}
+
+.space-option.selected {
+  background: #ABBF7E22;
+  color: #58732F;
+}
+
+.space-empty {
+  margin: 0;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.space-option-badge {
+  margin-left: auto;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: #ABBF7E;
+  color: #fff;
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+
+.space-manage-link {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #58732F;
+  text-decoration: none;
+  border-radius: 7px;
+  transition: background 0.12s;
+}
+
+.space-manage-link:hover {
+  background: #f1f5f0;
+}
+
+/* Nav divider */
+.nav-divider {
+  height: 1px;
+  background: #c8d8cc;
+  margin: 0.4rem 0;
+}
+
+/* Bottom nav (mobile) */
+.bottom-nav {
+  display: flex;
+  justify-content: space-around;
+  background: #fff;
+  border-top: 1px solid #dae2c6;
+  padding: 0.5rem 0;
+  position: sticky;
+  bottom: 0;
+}
+
+.bottom-nav a {
+  font-size: 0.78rem;
+  color: #374151;
+  text-decoration: none;
+  padding: 0.3rem 0.5rem;
+}
+
+@media (min-width: 768px) {
+  .bottom-nav {
+    display: none;
+  }
+}
+
+.content {
+  padding: 1.25rem;
 }
 </style>

@@ -13,6 +13,7 @@ export const useFinanceStore = defineStore('finance', {
     monthlyBudget: 0,
     loading: false,
     error: '',
+    currentSpaceId: null,
   }),
   getters: {
     dashboard(state) {
@@ -26,11 +27,23 @@ export const useFinanceStore = defineStore('finance', {
     },
   },
   actions: {
-    async bootstrap() {
+    async bootstrap(spaceId = null) {
       this.loading = true
       this.error = ''
+      this.currentSpaceId = spaceId
+      if (!spaceId) {
+        this.expenses = []
+        this.goals = []
+        this.categories = []
+        this.loading = false
+        return
+      }
       try {
-        const [expenses, goals, categories] = await Promise.all([listExpenses(), listGoals(), listCategories()])
+        const [expenses, goals, categories] = await Promise.all([
+          listExpenses(spaceId),
+          listGoals(spaceId),
+          listCategories(spaceId),
+        ])
         this.expenses = expenses || []
         this.goals = goals || []
         const derived = [...new Set((expenses || []).map((e) => e.category).filter(Boolean))]
@@ -47,7 +60,7 @@ export const useFinanceStore = defineStore('finance', {
       try {
         const rows = payload.id ? [payload] : withInstallments(payload)
         for (const row of rows) {
-          const saved = await saveExpense(row)
+          const saved = await saveExpense(row, this.currentSpaceId)
           if (Array.isArray(saved)) {
             this.expenses = saved
           } else {
@@ -76,7 +89,7 @@ export const useFinanceStore = defineStore('finance', {
     async upsertGoal(payload) {
       this.error = ''
       try {
-        const saved = await saveGoal(payload)
+        const saved = await saveGoal(payload, this.currentSpaceId)
         if (Array.isArray(saved)) {
           this.goals = saved
         } else {

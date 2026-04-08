@@ -10,67 +10,122 @@ async function getUserId() {
   return data?.user?.id || null
 }
 
-async function ensureCategory(categoryName, userId) {
+async function ensureCategory(categoryName, userId, spaceId) {
   if (!categoryName || !userId) return null
-  const { data: existing, error: findError } = await supabase
+  if (!spaceId) throw new Error('Debes seleccionar un espacio.')
+  const query = supabase
     .from(categoryTable)
     .select('id')
-    .eq('user_id', userId)
     .eq('name', categoryName)
-    .maybeSingle()
+    .eq('space_id', spaceId)
+
+  const { data: existing, error: findError } = await query.maybeSingle()
   if (findError) throw findError
   if (existing?.id) return existing.id
+
+  const payload = { user_id: userId, name: categoryName, space_id: spaceId }
   const { data: created, error: createError } = await supabase
     .from(categoryTable)
-    .insert({ user_id: userId, name: categoryName })
+    .insert(payload)
     .select('id')
     .single()
   if (createError) throw createError
   return created.id
 }
 
-export async function listCategories() {
+function normalizeUuid(value) {
+  if (value === '' || value === undefined) return null
+  return value
+}
+
+export async function listCategories(spaceId = null) {
   if (!isSupabaseConfigured) return []
   const userId = await getUserId()
   if (!userId) return []
-  const { data, error } = await supabase.from(categoryTable).select('id,name').eq('user_id', userId).order('name')
+  if (!spaceId) {
+    const query = supabase
+      .from(categoryTable)
+      .select('id,name,color')
+      .eq('user_id', userId)
+      .is('space_id', null)
+      .order('name')
+    const { data, error } = await query
+    if (error) throw error
+    return data || []
+  }
+  const query = supabase
+    .from(categoryTable)
+    .select('id,name,color')
+    .eq('space_id', spaceId)
+    .order('name')
+  const { data, error } = await query
   if (error) throw error
   return data || []
 }
 
-export async function listExpenses() {
-  if (!isSupabaseConfigured) return getLocalCollection('expenses')
+export async function saveCategory({ id, name, color = '#6b7280', spaceId = null }) {
+  if (!isSupabaseConfigured) throw new Error('Supabase no configurado')
   const userId = await getUserId()
-  if (!userId) return []
-  const { data, error } = await supabase
-    .from(table)
-    .select('*')
-    .eq('user_id', userId)
-    .order('payment_date', { ascending: false })
+  if (!userId) throw new Error('No hay usuario autenticado.')
+  if (!spaceId && !id) throw new Error('Debes seleccionar un espacio.')
+  if (id) {
+    let query = supabase
+      .from(categoryTable)
+      .update({ name, color })
+      .eq('id', id)
+    if (!spaceId) query = query.eq('user_id', userId)
+    const { data, error } = await query.select().single()
+    if (error) throw error
+    return data
+  }
+  const payload = { user_id: userId, name, color, space_id: spaceId || null }
+  const { data, error } = await supabase.from(categoryTable).insert(payload).select().single()
   if (error) throw error
   return data
 }
 
-export async function saveExpense(expense) {
-  if (!isSupabaseConfigured) {
-    return upsertLocalItem('expenses', expense)
-  }
+export async function deleteCategory(id, spaceId = null) {
+  if (!isSupabaseConfigured) throw new Error('Supabase no configurado')
   const userId = await getUserId()
-  if (!userId) {
-    throw new Error('No se detectó usuario autenticado.')
-  }
-  const categoryId = await ensureCategory(expense.category, userId)
+  if (!userId) throw new Error('No hay usuario autenticado.')
+  let query = supabase.from(categoryTable).delete().eq('id', id)
+  if (!spaceId) query = query.eq('user_id', userId)
+  const { error } = await query
+  if (error) throw error
+}
+
+export async function listExpenses(spaceId = null) {
+  if (!isSupabaseConfigured) return getLocalCollection('expenses')
+  if (!spaceId) return []
+  const userId = await getUserId()
+  if (!userId) return []
+  const query = supabase.from(table).select('*').eq('space_id', spaceId).order('payment_date', { ascending: false })
+  const { data, error } = await query
+  if (error) throw error
+  return data
+}
+
+export async function saveExpense(expense, spaceId = null) {
+  if (!isSupabaseConfigured) return upsertLocalItem('expenses', expense)
+  const userId = await getUserId()
+  if (!userId) throw new Error('No se detectó usuario autenticado.')
+  const effectiveSpaceId = expense.space_id || spaceId
+  if (!effectiveSpaceId) throw new Error('Debes seleccionar un espacio.')
+  const categoryId = await ensureCategory(expense.category, userId, effectiveSpaceId)
   const payload = {
     ...expense,
     user_id: userId,
     category_id: categoryId,
+    space_id: effectiveSpaceId,
+    responsible_user_id: normalizeUuid(expense.responsible_user_id),
   }
-  if (expense.id) {
+  payload.id = normalizeUuid(expense.id)
+  if (!payload.id) delete payload.id
+  if (payload.id) {
     const { data, error } = await supabase
       .from(table)
       .update(payload)
-      .eq('user_id', userId)
-      .eq('id', expense.id)
+      .eq('id', payload.id)
       .select()
       .single()
     if (error) throw error
@@ -82,11 +137,9 @@ export async function saveExpense(expense) {
 }
 
 export async function removeExpense(id) {
-  if (!isSupabaseConfigured) {
-    return deleteLocalItem('expenses', id)
-  }
+  if (!isSupabaseConfigured) return deleteLocalItem('expenses', id)
   const userId = await getUserId()
   if (!userId) throw new Error('No se detectó usuario de Supabase.')
-  const { error } = await supabase.from(table).delete().eq('user_id', userId).eq('id', id)
+  const { error } = await supabase.from(table).delete().eq('id', id)
   if (error) throw error
 }

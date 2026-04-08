@@ -7,6 +7,7 @@ import { useNotificationStore } from '../../store/useNotificationStore'
 import { useSpaceStore } from '../../store/useSpaceStore'
 import MonthSelector from '../ui/MonthSelector.vue'
 import NotificationBell from '../ui/NotificationBell.vue'
+import { Icon } from '@iconify/vue'
 
 const store = useFinanceStore()
 const auth = useAuthStore()
@@ -127,22 +128,13 @@ async function logout() {
         <template v-if="spaceStore.currentSpaceId">
           <RouterLink v-for="item in navItems" :key="item.to" :to="item.to" :class="{ active: route.name === item.name }">
             <!-- Gastos icon -->
-            <svg v-if="item.name === 'gastos'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>
-            </svg>
+            <Icon v-if="item.name === 'gastos'" icon="tabler:receipt-dollar" width="18" height="18" />
             <!-- Estadisticas icon -->
-            <svg v-if="item.name === 'planificacion'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
-            </svg>
+            <Icon v-if="item.name === 'planificacion'" icon="tabler:chart-bar" width="18" height="18" />
             <!-- Objetivos icon -->
-            <svg v-if="item.name === 'objetivos'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>
-            </svg>
+            <Icon v-if="item.name === 'objetivos'" icon="tabler:target" width="18" height="18" />
             <!-- Configuracion icon -->
-            <svg v-if="item.name === 'configuracion'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="3"/>
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-            </svg>
+            <Icon v-if="item.name === 'configuracion'" icon="tabler:settings" width="18" height="18" />
             {{ item.label }}
           </RouterLink>
           <div class="nav-divider" />
@@ -150,17 +142,13 @@ async function logout() {
 
         <!-- Gestionar espacios: always visible -->
         <RouterLink to="/espacios" :class="{ active: route.name === 'espacios' || route.name === 'espacio' }">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
-          </svg>
+          <Icon icon="tabler:layout-grid-add" width="18" height="18" />
           Espacios
         </RouterLink>
 
         <!-- Mi Perfil: always global -->
         <RouterLink to="/perfil" :class="{ active: route.name === 'perfil' }">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-          </svg>
+          <Icon icon="tabler:user" width="18" height="18" />
           Mi Perfil
         </RouterLink>
       </nav>
@@ -175,11 +163,7 @@ async function logout() {
           </div>
         </div>
         <button class="logout-btn" @click="logout">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-            <polyline points="16 17 21 12 16 7"/>
-            <line x1="21" y1="12" x2="9" y2="12"/>
-          </svg>
+          <Icon icon="tabler:logout" width="18" height="18" />
           Cerrar sesion
         </button>
       </div>
@@ -203,10 +187,12 @@ async function logout() {
 </template>
 
 <style scoped>
+/* ── Shell ──────────────────────────────────────────────────────────────── */
 .app-shell {
-  min-height: 100vh;
+  min-height: 100dvh;
   display: grid;
   grid-template-columns: 1fr;
+  background: var(--color-surface);
 }
 
 .sidebar {
@@ -221,26 +207,28 @@ async function logout() {
   .sidebar {
     display: flex;
     flex-direction: column;
-    background: #e8f0eb;
-    height: 100vh;
+    background: var(--color-surface-container-low);
+    height: 100dvh;
     position: sticky;
     top: 0;
     padding: 1.5rem 1rem;
+    overflow-y: auto;
   }
 }
 
-/* Logo */
+/* ── Logo ───────────────────────────────────────────────────────────────── */
 .sidebar-logo {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.65rem;
   margin-bottom: 1.75rem;
+  padding: 0 0.25rem;
 }
 
 .logo-icon {
-  width: 38px;
-  height: 38px;
-  background: #ABBF7E;
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-container) 100%);
   border-radius: 10px;
   display: flex;
   align-items: center;
@@ -249,139 +237,14 @@ async function logout() {
 }
 
 .logo-text {
-  font-size: 1.15rem;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
   font-weight: 700;
-  color: #0D0D0D;
-  letter-spacing: -0.01em;
+  color: var(--color-on-surface);
+  letter-spacing: -0.02em;
 }
 
-/* Nav */
-.side-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  flex: 1;
-}
-
-.side-nav a {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-  text-decoration: none;
-  color: #374151;
-  padding: 0.65rem 0.85rem;
-  border-radius: 10px;
-  font-size: 0.95rem;
-  font-weight: 500;
-  transition: background 0.15s, color 0.15s;
-}
-
-.side-nav a:hover:not(.active) {
-  background: #dae2c6;
-}
-
-.side-nav a.active,
-.side-nav a.router-link-exact-active {
-  background: #ABBF7E;
-  color: #ffffff;
-}
-
-/* User section */
-.sidebar-user {
-  border-top: 1px solid #c8d8cc;
-  padding-top: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-}
-
-.user-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: #58732F;
-  color: #ffffff;
-  font-size: 0.9rem;
-  font-weight: 400;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.user-details {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.user-name {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #0D0D0D;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.user-email {
-  font-size: 0.75rem;
-  color: #64748b;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.logout-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: transparent;
-  color: #374151;
-  font-size: 0.875rem;
-  font-weight: 500;
-  padding: 0.5rem 0.85rem;
-  border-radius: 8px;
-  cursor: pointer;
-  border: none;
-  width: 100%;
-  transition: background 0.15s;
-}
-
-.logout-btn:hover {
-  background: #ABBF7E;
-}
-
-/* Workspace */
-.workspace {
-  min-width: 0;
-}
-
-.topbar {
-  background: #fff;
-  border-bottom: 1px solid #dae2c6;
-  padding: 0.6rem 1.25rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-
-.topbar-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-/* Space switcher */
+/* ── Space switcher ─────────────────────────────────────────────────────── */
 .space-switcher {
   position: relative;
   margin-bottom: 1.25rem;
@@ -392,24 +255,23 @@ async function logout() {
   align-items: center;
   gap: 0.5rem;
   width: 100%;
-  background: rgba(255,255,255,0.5);
-  border: 1px solid #c8d8cc;
+  background: var(--color-surface-container);
+  border: none;
   border-radius: 10px;
   padding: 0.5rem 0.75rem;
   cursor: pointer;
-  font-size: 0.9rem;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
   font-weight: 500;
-  color: #0D0D0D;
+  color: var(--color-on-surface);
   transition: background 0.15s;
 }
-
 .space-btn:hover {
-  background: rgba(255,255,255,0.8);
+  background: var(--color-surface-container-high);
 }
-
 .space-btn svg {
   margin-left: auto;
-  color: #6b7280;
+  color: var(--color-on-surface-muted);
   flex-shrink: 0;
 }
 
@@ -436,24 +298,23 @@ async function logout() {
 
 .space-menu {
   position: absolute;
-  top: calc(100% + 4px);
+  top: calc(100% + 6px);
   left: 0;
   right: 0;
-  background: #fff;
-  border: 1px solid #dae2c6;
-  border-radius: 10px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+  background: var(--color-surface-bright);
+  border-radius: 12px;
+  box-shadow: var(--shadow-float);
   z-index: 50;
-  padding: 0.35rem;
+  padding: 0.4rem;
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: 0.1rem;
 }
 
 .space-menu-divider {
   height: 1px;
-  background: #dae2c6;
-  margin: 0.3rem 0;
+  background: rgba(70, 70, 82, 0.25);
+  margin: 0.3rem 0.25rem;
 }
 
 .space-option {
@@ -463,91 +324,217 @@ async function logout() {
   width: 100%;
   background: transparent;
   border: none;
-  border-radius: 7px;
-  padding: 0.45rem 0.6rem;
+  border-radius: 8px;
+  padding: 0.5rem 0.65rem;
+  font-family: var(--font-body);
   font-size: 0.875rem;
   font-weight: 500;
-  color: #374151;
+  color: var(--color-on-surface);
   cursor: pointer;
   text-align: left;
   transition: background 0.12s;
 }
-
-.space-option:hover {
-  background: #f1f5f0;
-}
-
+.space-option:hover { background: var(--color-surface-container-highest); }
 .space-option.selected {
-  background: #ABBF7E22;
-  color: #58732F;
-}
-
-.space-empty {
-  margin: 0;
-  padding: 0.45rem 0.6rem;
-  font-size: 0.8rem;
-  color: #6b7280;
+  background: rgba(186, 195, 255, 0.1);
+  color: var(--color-primary);
 }
 
 .space-option-badge {
   margin-left: auto;
   font-size: 0.7rem;
   font-weight: 600;
-  background: #ABBF7E;
-  color: #fff;
+  background: rgba(68, 221, 193, 0.15);
+  color: var(--color-secondary);
   border-radius: 4px;
-  padding: 1px 6px;
+  padding: 2px 7px;
 }
 
 .space-manage-link {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.45rem 0.6rem;
+  padding: 0.5rem 0.65rem;
+  font-family: var(--font-body);
   font-size: 0.875rem;
   font-weight: 500;
-  color: #58732F;
+  color: var(--color-primary);
   text-decoration: none;
-  border-radius: 7px;
+  border-radius: 8px;
   transition: background 0.12s;
 }
+.space-manage-link:hover { background: rgba(186, 195, 255, 0.08); }
 
-.space-manage-link:hover {
-  background: #f1f5f0;
+/* ── Side nav ───────────────────────────────────────────────────────────── */
+.side-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  flex: 1;
 }
 
-/* Nav divider */
+.side-nav a {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  text-decoration: none;
+  color: var(--color-on-surface-variant);
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: background 0.15s, color 0.15s;
+}
+.side-nav a:hover:not(.active) {
+  background: var(--color-surface-container);
+  color: var(--color-on-surface);
+}
+.side-nav a.active {
+  background: rgba(186, 195, 255, 0.12);
+  color: var(--color-primary);
+}
+
 .nav-divider {
   height: 1px;
-  background: #c8d8cc;
-  margin: 0.4rem 0;
+  background: rgba(70, 70, 82, 0.2);
+  margin: 0.4rem 0.25rem;
 }
 
-/* Bottom nav (mobile) */
+/* ── User section ───────────────────────────────────────────────────────── */
+.sidebar-user {
+  padding-top: 1rem;
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  border-top: 1px solid rgba(70, 70, 82, 0.2);
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.25rem 0.25rem;
+}
+
+.user-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-container) 100%);
+  color: var(--color-on-primary);
+  font-family: var(--font-display);
+  font-size: 0.875rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.user-details {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.user-name {
+  font-family: var(--font-body);
+  font-size: 0.8375rem;
+  font-weight: 600;
+  color: var(--color-on-surface);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-email {
+  font-size: 0.72rem;
+  color: var(--color-on-surface-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.logout-btn {
+  display: flex;
+  align-items: center;
+  justify-content: left;
+  gap: 0.5rem;
+  background: transparent;
+  color: var(--color-on-surface-variant);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.5rem 0.85rem;
+  border-radius: 8px;
+  cursor: pointer;
+  border: none;
+  width: 100%;
+  transition: background 0.15s, color 0.15s;
+}
+.logout-btn:hover {
+  background: rgba(255, 180, 171, 0.1);
+  color: var(--color-error);
+}
+
+/* ── Workspace ──────────────────────────────────────────────────────────── */
+.workspace {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  background: var(--color-surface-container-low);
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Bottom nav (mobile) ────────────────────────────────────────────────── */
 .bottom-nav {
   display: flex;
   justify-content: space-around;
-  background: #fff;
-  border-top: 1px solid #dae2c6;
+  background: var(--color-surface-container-low);
   padding: 0.5rem 0;
   position: sticky;
   bottom: 0;
+  padding-bottom: env(safe-area-inset-bottom, 0.5rem);
 }
 
 .bottom-nav a {
+  font-family: var(--font-body);
   font-size: 0.78rem;
-  color: #374151;
+  font-weight: 500;
+  color: var(--color-on-surface-muted);
   text-decoration: none;
-  padding: 0.3rem 0.5rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 8px;
+  transition: color 0.15s;
+}
+
+.bottom-nav a.router-link-active {
+  color: var(--color-secondary);
 }
 
 @media (min-width: 768px) {
-  .bottom-nav {
-    display: none;
-  }
+  .bottom-nav { display: none; }
 }
 
 .content {
-  padding: 1.25rem;
+  padding: 1.5rem 1.25rem;
+  flex: 1;
 }
 </style>

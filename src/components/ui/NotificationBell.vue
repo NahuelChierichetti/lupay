@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useNotificationStore } from '../../store/useNotificationStore'
 import { useAuthStore } from '../../store/useAuthStore'
+import { Icon } from '@iconify/vue'
 import dayjs from 'dayjs'
 
 const notifStore = useNotificationStore()
@@ -17,26 +18,26 @@ const TYPE_CONFIG = {
   due_soon: {
     label: 'Vence mañana',
     icon: 'clock',
-    color: '#f59e0b',
-    bg: '#fef3c7',
+    color: '#F4C55B',
+    bg: 'rgba(244, 197, 91, 0.12)',
   },
   assignment: {
     label: 'Te asignaron un gasto',
     icon: 'user',
-    color: '#3b82f6',
-    bg: '#dbeafe',
+    color: '#BAC3FF',
+    bg: 'rgba(186, 195, 255, 0.12)',
   },
   invite: {
     label: 'Invitacion pendiente',
     icon: 'user-plus',
-    color: '#7c3aed',
-    bg: '#ede9fe',
+    color: '#CDBDFF',
+    bg: 'rgba(205, 189, 255, 0.12)',
   },
   space_invite: {
     label: 'Invitacion a espacio',
     icon: 'users',
-    color: '#0d9488',
-    bg: '#ccfbf1',
+    color: '#44DDC1',
+    bg: 'rgba(68, 221, 193, 0.12)',
   },
 }
 
@@ -102,10 +103,7 @@ onUnmounted(() => document.removeEventListener('mousedown', handleClickOutside))
   <div class="bell-wrap">
     <!-- Bell button -->
     <button ref="bellRef" class="bell-btn" :class="{ active: open }" @click="toggle">
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-      </svg>
+      <Icon icon="tabler:bell" width="24" height="24" />
       <span v-if="notifStore.unreadCount > 0" class="badge">
         {{ notifStore.unreadCount > 9 ? '9+' : notifStore.unreadCount }}
       </span>
@@ -128,10 +126,7 @@ onUnmounted(() => document.removeEventListener('mousedown', handleClickOutside))
 
         <!-- Empty state -->
         <div v-if="notifStore.notifications.length === 0" class="panel-empty">
-          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-          </svg>
+          <Icon icon="tabler:bell-off" width="32" height="32" class="text-[#d1d5db]"/>
           <p>Sin notificaciones</p>
         </div>
 
@@ -185,134 +180,144 @@ onUnmounted(() => document.removeEventListener('mousedown', handleClickOutside))
   position: relative;
 }
 
+/* ── Bell button ──────────────────────────────────────────────────────────── */
 .bell-btn {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 46px;
-  height: 46px;
-  background: #f9f9f9;
-  border-radius: 8px;
+  width: 38px;
+  height: 38px;
+  padding: 0 !important;
+  border: none;
+  background: transparent;
+  border-radius: 999px;
   cursor: pointer;
-  color: #4b5563;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
-  cursor: pointer;
+  color: var(--color-on-surface-muted);
+  transition: background 0.15s, color 0.15s;
 }
 .bell-btn:hover,
 .bell-btn.active {
-  background: #f9fafb;
-  border-color: #d1d5db;
-  color: #111827;
+  background: var(--color-surface-container-high);
+  color: var(--color-on-surface);
 }
 
+/* ── Unread count badge ───────────────────────────────────────────────────── */
 .badge {
   position: absolute;
-  top: -5px;
-  right: -5px;
-  min-width: 20px;
-  height: 20px;
-  background: #ef4444;
-  color: #fff;
+  top: -3px;
+  right: -3px;
+  min-width: 18px;
+  height: 18px;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
   border-radius: 99px;
-  font-size: 0.6875rem;
+  font-family: var(--font-body);
+  font-size: 0.625rem;
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0 3px;
-  border: 2px solid #fff;
+  border: 2px solid var(--color-surface-container-low);
   line-height: 1;
 }
 
-/* Panel */
+/* ── Panel ────────────────────────────────────────────────────────────────── */
 .notif-panel {
   position: absolute;
   top: calc(100% + 10px);
   right: 0;
   width: 340px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 14px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.13);
+  background: var(--color-surface-bright);
+  border-radius: 1rem;
+  box-shadow: var(--shadow-float);
   z-index: 100;
   overflow: hidden;
 }
 
+/* ── Panel header ─────────────────────────────────────────────────────────── */
 .panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 14px 16px 12px;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid rgba(70, 70, 82, 0.2);
 }
 
 .panel-title {
+  font-family: var(--font-display);
   font-size: 0.9375rem;
-  font-weight: 600;
-  color: #111827;
+  font-weight: 700;
+  color: var(--color-on-surface);
 }
 
 .mark-all-btn {
   border: none;
   background: none;
-  font-size: 0.8125rem;
-  color: #4a7c3f;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  color: var(--color-primary);
   cursor: pointer;
-  font-weight: 500;
+  font-weight: 600;
   padding: 0;
-  transition: color 0.15s;
+  border-radius: 999px;
+  transition: opacity 0.15s;
 }
-.mark-all-btn:hover { color: #3d6834; }
+.mark-all-btn:hover { opacity: 0.75; }
 
-/* Empty */
+/* ── Empty state ──────────────────────────────────────────────────────────── */
 .panel-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
   padding: 36px 0;
-  color: #9ca3af;
+  color: var(--color-on-surface-muted);
+  font-family: var(--font-body);
   font-size: 0.875rem;
 }
 .panel-empty p { margin: 0; }
 
-/* List */
+/* ── List ─────────────────────────────────────────────────────────────────── */
 .notif-list {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 0.375rem;
   max-height: 380px;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .notif-item {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 12px 16px;
+  padding: 10px 12px;
+  border-radius: 0.625rem;
   cursor: pointer;
-  transition: background 0.1s;
+  transition: background 0.12s;
   position: relative;
 }
-.notif-item:hover { background: #f9fafb; }
-.notif-item.unread { background: #f0fdf4; }
-.notif-item.unread:hover { background: #dcfce7; }
-.notif-item + .notif-item {
-  border-top: 1px solid #f3f4f6;
-}
+.notif-item:hover { background: var(--color-surface-container-highest); }
+.notif-item.unread { background: rgba(186, 195, 255, 0.07); }
+.notif-item.unread:hover { background: rgba(186, 195, 255, 0.12); }
 
+/* ── Notif icon ───────────────────────────────────────────────────────────── */
 .notif-icon {
   flex-shrink: 0;
   width: 32px;
   height: 32px;
-  padding: 0px !important;
+  padding: 0 !important;
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
+/* ── Notif content ────────────────────────────────────────────────────────── */
 .notif-content {
   flex: 1;
   min-width: 0;
@@ -322,15 +327,17 @@ onUnmounted(() => document.removeEventListener('mousedown', handleClickOutside))
 }
 
 .notif-type-label {
+  font-family: var(--font-body);
   font-size: 0.8125rem;
   font-weight: 600;
-  color: #111827;
+  color: var(--color-on-surface);
   margin: 0;
 }
 
 .notif-expense-label {
-  font-size: 0.8125rem;
-  color: #4b5563;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  color: var(--color-on-surface-variant);
   margin: 0;
   white-space: nowrap;
   overflow: hidden;
@@ -338,22 +345,24 @@ onUnmounted(() => document.removeEventListener('mousedown', handleClickOutside))
 }
 
 .notif-time {
-  font-size: 0.75rem;
-  color: #9ca3af;
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  color: var(--color-on-surface-muted);
   margin: 0;
   margin-top: 2px;
 }
 
+/* ── Unread dot ───────────────────────────────────────────────────────────── */
 .unread-dot {
   flex-shrink: 0;
-  width: 8px;
-  height: 8px;
-  background: #4a7c3f;
+  width: 7px;
+  height: 7px;
+  background: var(--color-primary);
   border-radius: 50%;
-  margin-top: 4px;
+  margin-top: 5px;
 }
 
-/* Transition */
+/* ── Transition ───────────────────────────────────────────────────────────── */
 .dropdown-enter-active, .dropdown-leave-active {
   transition: opacity 0.15s ease, transform 0.15s ease;
 }

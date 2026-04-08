@@ -156,13 +156,17 @@ function submit() {
 </template>
 
 <style scoped>
+/* ── Backdrop ─────────────────────────────────────────────────────────────── */
 .drawer-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   z-index: 40;
 }
 
+/* ── Panel ────────────────────────────────────────────────────────────────── */
 .drawer-panel {
   position: fixed;
   top: 0;
@@ -170,50 +174,54 @@ function submit() {
   height: 100%;
   width: 420px;
   max-width: 100vw;
-  background: #fff;
-  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
+  background: var(--color-surface-container-low);
+  box-shadow: -8px 0 48px rgba(229, 226, 225, 0.04);
   z-index: 41;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
 }
 
+/* ── Header ───────────────────────────────────────────────────────────────── */
 .drawer-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 24px 24px 16px;
-  border-bottom: 1px solid #e8ede9;
+  padding: 1.5rem 1.5rem 1rem;
+  border-bottom: 1px solid rgba(70, 70, 82, 0.2);
 }
 
 .drawer-header h3 {
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: #1a1a1a;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--color-on-surface);
   margin: 0;
+  letter-spacing: -0.01em;
 }
 
 .drawer-close {
-  background: none;
+  background: transparent;
   border: none;
   cursor: pointer;
-  color: #6b7280;
-  padding: 4px;
+  color: var(--color-on-surface-muted);
+  padding: 6px;
   display: flex;
   align-items: center;
-  border-radius: 6px;
-  transition: background 0.15s;
+  border-radius: 8px;
+  transition: background 0.15s, color 0.15s;
 }
 .drawer-close:hover {
-  background: #f3f4f6;
-  color: #1a1a1a;
+  background: var(--color-surface-container-high);
+  color: var(--color-on-surface);
 }
 
+/* ── Form ─────────────────────────────────────────────────────────────────── */
 .drawer-form {
-  padding: 24px;
+  padding: 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 1.25rem;
   flex: 1;
 }
 
@@ -224,111 +232,121 @@ function submit() {
 }
 
 .drawer-field label {
-  font-size: 0.8125rem;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
   font-weight: 500;
-  color: #374151;
+  color: var(--color-on-surface-variant);
+  letter-spacing: 0.01em;
 }
 
+/* Override global input styles within the drawer for full-width */
 .drawer-field input,
 .drawer-field select {
-  padding: 9px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font-size: 0.9375rem;
-  color: #1a1a1a;
-  background: #fff;
-  outline: none;
-  transition: border-color 0.15s;
-}
-.drawer-field input:focus,
-.drawer-field select:focus {
-  border-color: #5a7a3a;
-  box-shadow: 0 0 0 3px rgba(90, 122, 58, 0.1);
+  width: 100%;
 }
 
+/* ── Amount prefix ────────────────────────────────────────────────────────── */
 .input-prefix-wrap {
   position: relative;
   display: flex;
   align-items: center;
 }
+
 .input-prefix {
   position: absolute;
-  left: 12px;
-  color: #6b7280;
-  font-size: 0.9375rem;
+  left: 1rem;
+  color: var(--color-on-surface-muted);
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 600;
   pointer-events: none;
-}
-.input-prefixed {
-  padding-left: 24px !important;
-  width: 100%;
+  z-index: 1;
 }
 
+.input-prefixed {
+  padding-left: 1.75rem !important;
+  font-family: var(--font-display) !important;
+  font-size: 1.1rem !important;
+  font-weight: 600 !important;
+}
+
+/* ── Two-column row ───────────────────────────────────────────────────────── */
 .drawer-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 1rem;
 }
 
+/* ── Hint text ────────────────────────────────────────────────────────────── */
 .drawer-hint {
-  font-size: 0.8125rem;
-  color: #6b7280;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  color: var(--color-secondary);
   margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.drawer-hint::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-secondary);
+  flex-shrink: 0;
 }
 
+/* ── Actions ──────────────────────────────────────────────────────────────── */
 .drawer-actions {
   margin-top: auto;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding-top: 8px;
+  gap: 0.75rem;
+  padding-top: 0.5rem;
 }
 
 .btn-primary {
-  padding: 11px 20px;
-  background: #4a7c3f;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.9375rem;
-  font-weight: 500;
+  width: 100%;
+  padding: 0.75rem;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  border: 1.5px solid transparent;
+  border-radius: 999px;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: opacity 0.18s;
 }
-.btn-primary:hover {
-  background: #3d6834;
-}
+.btn-primary:hover { opacity: 0.85; }
 
 .btn-secondary {
-  padding: 11px 20px;
-  background: #fff;
-  color: #374151;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font-size: 0.9375rem;
-  font-weight: 500;
+  width: 100%;
+  padding: 0.75rem;
+  background: transparent;
+  color: var(--color-on-surface);
+  border: 1.5px solid var(--color-outline-variant);
+  border-radius: 999px;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background 0.18s, border-color 0.18s;
 }
 .btn-secondary:hover {
-  background: #f9fafb;
+  background: var(--color-surface-container-high);
+  border-color: var(--color-on-surface-muted);
 }
 
-/* Transitions */
+/* ── Transitions ──────────────────────────────────────────────────────────── */
 .drawer-backdrop-enter-active,
-.drawer-backdrop-leave-active {
-  transition: opacity 0.2s ease;
-}
+.drawer-backdrop-leave-active { transition: opacity 0.25s ease; }
 .drawer-backdrop-enter-from,
-.drawer-backdrop-leave-to {
-  opacity: 0;
-}
+.drawer-backdrop-leave-to { opacity: 0; }
 
 .drawer-panel-enter-active,
-.drawer-panel-leave-active {
-  transition: transform 0.25s ease;
-}
+.drawer-panel-leave-active { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
 .drawer-panel-enter-from,
-.drawer-panel-leave-to {
-  transform: translateX(100%);
-}
+.drawer-panel-leave-to { transform: translateX(100%); }
 </style>

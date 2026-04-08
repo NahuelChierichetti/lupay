@@ -116,6 +116,7 @@ function closeGrid() {
   gap: 2px;
 }
 
+/* ── Arrow buttons ────────────────────────────────────────────────────────── */
 .nav-btn {
   display: flex;
   align-items: center;
@@ -124,52 +125,52 @@ function closeGrid() {
   height: 30px;
   padding: 0 !important;
   border: none;
-  background: none;
-  border-radius: 6px;
+  background: transparent;
+  border-radius: 999px;
   cursor: pointer;
-  color: #4b5563 !important;
+  color: var(--color-on-surface-muted);
   transition: background 0.15s, color 0.15s;
 }
 .nav-btn:hover:not(:disabled) {
-  background: #f3f4f6;
-  color: #111827;
+  background: var(--color-surface-container-high);
+  color: var(--color-on-surface);
 }
 .nav-btn:disabled {
-  opacity: 0.3;
+  opacity: 0.25;
   cursor: not-allowed;
 }
 
+/* ── Label pill ───────────────────────────────────────────────────────────── */
 .label-btn {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 5px 10px;
-  border: 1px solid #e5e7eb;
-  background: #fff;
-  border-radius: 8px;
-  font-size: 0.9375rem;
+  padding: 5px 12px;
+  background: var(--color-surface-container-high);
+  border: 1.5px solid transparent;
+  border-radius: 999px;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
   font-weight: 600;
-  color: #111827;
+  color: var(--color-on-surface);
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background 0.15s;
   min-width: 148px;
   justify-content: center;
 }
 .label-btn:hover {
-  background: #f9fafb;
-  border-color: #d1d5db;
+  background: var(--color-surface-bright);
 }
 
-/* Dropdown */
+/* ── Dropdown ─────────────────────────────────────────────────────────────── */
 .month-grid-dropdown {
   position: absolute;
   top: calc(100% + 8px);
   left: 50%;
   transform: translateX(-50%);
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  background: var(--color-surface-bright);
+  border-radius: 1rem;
+  box-shadow: var(--shadow-float);
   padding: 14px;
   width: 224px;
   z-index: 100;
@@ -183,9 +184,10 @@ function closeGrid() {
 }
 
 .grid-year-label {
+  font-family: var(--font-display);
   font-size: 0.9375rem;
-  font-weight: 600;
-  color: #111827;
+  font-weight: 700;
+  color: var(--color-on-surface);
 }
 
 .year-nav-btn {
@@ -196,46 +198,53 @@ function closeGrid() {
   height: 28px;
   padding: 0 !important;
   border: none;
-  background: none;
-  border-radius: 6px;
+  background: transparent;
+  border-radius: 999px;
   cursor: pointer;
-  color: #4b5563 !important;
-  transition: background 0.15s;
+  color: var(--color-on-surface-muted);
+  transition: background 0.15s, color 0.15s;
 }
-.year-nav-btn:hover:not(:disabled) { background: #f3f4f6; }
-.year-nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.year-nav-btn:hover:not(:disabled) {
+  background: var(--color-surface-container-highest);
+  color: var(--color-on-surface);
+}
+.year-nav-btn:disabled { opacity: 0.25; cursor: not-allowed; }
 
+/* ── Month grid ───────────────────────────────────────────────────────────── */
 .month-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
+  gap: 5px;
 }
 
 .month-cell {
   padding: 7px 4px;
   border: none;
-  background: none;
-  border-radius: 7px;
-  font-size: 0.8125rem;
+  background: transparent;
+  border-radius: 999px;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
   font-weight: 500;
-  color: #374151;
+  color: var(--color-on-surface-variant);
   cursor: pointer;
   transition: background 0.12s, color 0.12s;
   text-align: center;
 }
 .month-cell:hover:not(.disabled):not(.selected) {
-  background: #f3f4f6;
+  background: var(--color-surface-container-highest);
+  color: var(--color-on-surface);
 }
 .month-cell.selected {
-  background: #4a7c3f;
-  color: #fff;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-weight: 700;
 }
 .month-cell.disabled {
-  opacity: 0.35;
+  opacity: 0.25;
   cursor: not-allowed;
 }
 
-/* Transition */
+/* ── Transition ───────────────────────────────────────────────────────────── */
 .dropdown-enter-active, .dropdown-leave-active {
   transition: opacity 0.15s ease, transform 0.15s ease;
 }

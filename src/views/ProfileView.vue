@@ -5,6 +5,7 @@ import { useFinanceStore } from '../store/useFinanceStore'
 import { useAuthStore } from '../store/useAuthStore'
 import { useNotificationStore } from '../store/useNotificationStore'
 import { listMyInvitations, acceptInvite, rejectInvite } from '../services/collaboratorService'
+import { Icon } from '@iconify/vue'
 import dayjs from 'dayjs'
 import 'dayjs/locale/es'
 dayjs.locale('es')
@@ -32,7 +33,16 @@ const memberSince = computed(() => {
 })
 
 const userInitial = computed(() => {
-  return (form.full_name || form.email || 'U')[0].toUpperCase()
+  const fullName = (form.full_name || '').trim()
+  if (fullName) {
+    const initials = fullName
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() || '')
+      .join('')
+    if (initials) return initials
+  }
+  return (form.email || 'U')[0].toUpperCase()
 })
 
 onMounted(async () => {
@@ -142,9 +152,10 @@ const CURRENCIES = [
       <div class="user-summary">
         <div class="profile-avatar">
           <img v-if="form.avatar_url" :src="form.avatar_url" :alt="form.full_name" class="avatar-img" />
-          <svg v-else xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <!-- <svg v-else xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-          </svg>
+          </svg> -->
+          <span class="user-initial">{{ userInitial }}</span>
         </div>
         <div class="user-meta">
           <span class="user-name">{{ form.full_name || form.email }}</span>
@@ -234,48 +245,72 @@ const CURRENCIES = [
 </template>
 
 <style scoped>
+/* ── Page ─────────────────────────────────────────────────────────────────── */
 .profile-page {
-  padding: 32px 36px;
+  padding: 2rem 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 1.5rem;
   min-height: 100%;
-  background: #f7f8f6;
+  background: var(--color-surface);
+}
+
+@media (min-width: 768px) {
+  .profile-page { padding: 2.5rem 2.5rem; }
 }
 
 .page-header { display: flex; flex-direction: column; gap: 4px; }
-.page-title { font-size: 1.625rem; font-weight: 700; color: #1a1a1a; margin: 0; }
-.page-subtitle { font-size: 0.875rem; color: #6b7280; margin: 0; }
+.page-title {
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--color-on-surface);
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+.page-subtitle {
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  color: var(--color-on-surface-muted);
+  margin: 0;
+}
 
-/* ── Card ─────────────────────────────────────────────────────────────────── */
+/* ── Cards ────────────────────────────────────────────────────────────────── */
 .profile-card {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 28px;
+  background: var(--color-surface-container-high);
+  border-radius: 1.25rem;
+  padding: 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 1.25rem;
+  box-shadow: var(--shadow-card);
 }
 
 /* ── User summary ─────────────────────────────────────────────────────────── */
 .user-summary {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 1rem;
 }
 
 .profile-avatar {
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: #dcfce7;
-  color: #4a7c3f;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   overflow: hidden;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.user-initial {
+  color: var(--color-on-primary);
 }
 
 .avatar-img {
@@ -287,28 +322,32 @@ const CURRENCIES = [
 .user-meta {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
 .user-name {
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: #1a1a1a;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-on-surface);
 }
 
 .user-email {
+  font-family: var(--font-body);
   font-size: 0.875rem;
-  color: #6b7280;
+  color: var(--color-on-surface-variant);
 }
 
 .user-since {
-  font-size: 0.8125rem;
-  color: #9ca3af;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  color: var(--color-on-surface-muted);
 }
 
+/* Divider replaced by tonal spacing — no border */
 .divider {
   border: none;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid rgba(70, 70, 82, 0.2);
   margin: 0;
 }
 
@@ -316,7 +355,7 @@ const CURRENCIES = [
 .profile-form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 1rem;
 }
 
 .form-field {
@@ -326,58 +365,41 @@ const CURRENCIES = [
 }
 
 .form-field label {
-  font-size: 0.8125rem;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
   font-weight: 500;
-  color: #374151;
-}
-
-.form-field input,
-.form-field select {
-  padding: 10px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font-size: 0.9375rem;
-  color: #1a1a1a;
-  background: #fff;
-  outline: none;
-  width: 100%;
-  box-sizing: border-box;
-  transition: border-color 0.15s;
-}
-
-.form-field input:focus,
-.form-field select:focus {
-  border-color: #4a7c3f;
-  box-shadow: 0 0 0 3px rgba(74, 124, 63, 0.1);
+  color: var(--color-on-surface-variant);
 }
 
 .form-field input:disabled,
 .form-field select:disabled {
-  background: #f9fafb;
-  color: #9ca3af;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
 .field-hint {
-  font-size: 0.8125rem;
-  color: #9ca3af;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  color: var(--color-on-surface-muted);
 }
 
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 1rem;
 }
 
 .form-error {
+  font-family: var(--font-body);
   font-size: 0.875rem;
-  color: #dc2626;
+  color: var(--color-error);
   margin: 0;
 }
 
 .form-success {
+  font-family: var(--font-body);
   font-size: 0.875rem;
-  color: #166534;
+  color: var(--color-secondary);
   margin: 0;
 }
 
@@ -385,19 +407,20 @@ const CURRENCIES = [
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 11px 20px;
-  background: #4a7c3f;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.9375rem;
-  font-weight: 500;
+  padding: 0.625rem 1.25rem;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  border: 1.5px solid transparent;
+  border-radius: 999px;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 600;
   cursor: pointer;
   width: fit-content;
-  transition: background 0.15s;
+  transition: opacity 0.18s;
 }
-.btn-save:hover:not(:disabled) { background: #3d6834; }
-.btn-save:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-save:hover:not(:disabled) { opacity: 0.85; }
+.btn-save:disabled { opacity: 0.35; cursor: not-allowed; }
 
 /* ── Card header (invitations) ────────────────────────────────────────────── */
 .card-header {
@@ -410,21 +433,23 @@ const CURRENCIES = [
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #4a7c3f;
+  color: var(--color-primary);
 }
 .card-title-row h3 {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #1a1a1a;
+  font-family: var(--font-display);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--color-on-surface);
   margin: 0;
 }
 
 .badge-count {
-  background: #4a7c3f;
-  color: #fff;
+  background: rgba(186, 195, 255, 0.15);
+  color: var(--color-primary);
+  font-family: var(--font-body);
   font-size: 0.75rem;
-  font-weight: 600;
-  padding: 2px 7px;
+  font-weight: 700;
+  padding: 2px 8px;
   border-radius: 99px;
 }
 
@@ -435,27 +460,29 @@ const CURRENCIES = [
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 0.75rem;
 }
 
 .invite-row {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 16px;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  background: #f9fafb;
+  padding: 1rem;
+  background: var(--color-surface-container);
+  border-radius: 0.875rem;
+  transition: background 0.15s;
 }
+.invite-row:hover { background: var(--color-surface-bright); }
 
 .invite-avatar {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: rgba(186, 195, 255, 0.12);
+  color: var(--color-primary);
+  font-family: var(--font-display);
   font-size: 0.9375rem;
-  font-weight: 600;
+  font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -470,14 +497,16 @@ const CURRENCIES = [
 }
 
 .invite-from {
-  font-size: 0.9375rem;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
   font-weight: 500;
-  color: #1a1a1a;
+  color: var(--color-on-surface);
 }
 
 .invite-role, .invite-date {
-  font-size: 0.8125rem;
-  color: #6b7280;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  color: var(--color-on-surface-muted);
 }
 
 .invite-btns {
@@ -487,37 +516,44 @@ const CURRENCIES = [
 }
 
 .btn-accept {
-  padding: 7px 14px;
-  background: #4a7c3f;
-  color: #fff;
-  border: none;
-  border-radius: 7px;
-  font-size: 0.875rem;
-  font-weight: 500;
+  padding: 0.45rem 0.9rem;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  border: 1.5px solid transparent;
+  border-radius: 999px;
+  font-family: var(--font-body);
+  font-size: 0.8375rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: opacity 0.18s;
 }
-.btn-accept:hover:not(:disabled) { background: #3d6834; }
-.btn-accept:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-accept:hover:not(:disabled) { opacity: 0.85; }
+.btn-accept:disabled { opacity: 0.35; cursor: not-allowed; }
 
 .btn-reject {
-  padding: 7px 14px;
-  background: #fff;
-  color: #dc2626;
-  border: 1px solid #fca5a5;
-  border-radius: 7px;
-  font-size: 0.875rem;
-  font-weight: 500;
+  padding: 0.45rem 0.9rem;
+  background: transparent;
+  color: var(--color-on-surface-variant);
+  border: 1.5px solid var(--color-outline-variant);
+  border-radius: 999px;
+  font-family: var(--font-body);
+  font-size: 0.8375rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background 0.18s, color 0.18s, border-color 0.18s;
 }
-.btn-reject:hover:not(:disabled) { background: #fee2e2; }
-.btn-reject:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-reject:hover:not(:disabled) {
+  background: rgba(255, 180, 171, 0.1);
+  color: var(--color-error);
+  border-color: var(--color-error);
+}
+.btn-reject:disabled { opacity: 0.35; cursor: not-allowed; }
 
 .empty-state {
+  font-family: var(--font-body);
   font-size: 0.875rem;
-  color: #9ca3af;
+  color: var(--color-on-surface-muted);
   text-align: center;
-  padding: 24px 0;
+  padding: 1.5rem 0;
 }
 </style>

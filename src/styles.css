@@ -730,6 +730,485 @@ progress::-moz-progress-bar {
 }
 
 /* ============================================================
+   PLANNING VIEW — "Galería de Datos"
+   ============================================================ */
+.planning-view {
+  display: grid;
+  gap: 1.25rem;
+}
+
+/* Header */
+.planning-header {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.planning-header__overline {
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--color-on-surface);
+  margin: 0;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.planning-header__sub {
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  color: var(--color-on-surface-muted);
+  margin: 4px 0 0;
+}
+
+.planning-tabs {
+  display: inline-flex;
+  background: var(--color-surface-container);
+  border-radius: 999px;
+  padding: 0.25rem;
+  gap: 0.25rem;
+  width: fit-content;
+}
+
+.planning-tab {
+  background: transparent;
+  color: var(--color-on-surface-variant);
+  border-radius: 999px;
+  padding: 0.5rem 1.25rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border: none;
+  transition: background 0.2s, color 0.2s;
+}
+
+.planning-tab.active {
+  background: var(--color-secondary);
+  color: var(--color-on-secondary);
+}
+
+.planning-tab:not(.active):hover {
+  background: var(--color-surface-container-high);
+  color: var(--color-on-surface);
+}
+
+/* KPI Cards */
+.planning-kpi-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.planning-kpi {
+  background: var(--color-surface-container-high);
+  border-radius: 1.25rem;
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  transition: background 0.2s ease;
+}
+
+.planning-kpi:hover {
+  background: var(--color-surface-bright);
+}
+
+.planning-kpi__label {
+  color: var(--color-secondary);
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  font-size: 0.6875rem;
+}
+
+.planning-kpi__value {
+  margin: 0;
+  line-height: 1.1;
+}
+
+.planning-kpi__value--category {
+  font-size: clamp(1.25rem, 2.5vw, 1.75rem);
+}
+
+.planning-kpi__delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.25rem;
+}
+
+.delta-positive { color: var(--color-secondary); }
+.delta-negative { color: var(--color-error); }
+.delta-neutral  { color: var(--color-on-surface-variant); }
+
+/* Chart Cards (shared) */
+.planning-chart-card {
+  background: var(--color-surface-container-high);
+  border-radius: 1.25rem;
+  padding: 1.5rem;
+  transition: background 0.2s ease;
+}
+
+.planning-chart-card:hover {
+  background: var(--color-surface-bright);
+}
+
+.planning-chart-card .headline-md {
+  margin-bottom: 0.75rem;
+}
+
+/* Distribution Layout */
+.distribution-layout {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.distribution-chart {
+  flex-shrink: 0;
+}
+
+.distribution-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.distribution-legend__item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.distribution-legend__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.distribution-legend__name {
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  color: var(--color-on-surface-variant);
+  flex: 1;
+}
+
+.distribution-legend__pct {
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--color-on-surface);
+}
+
+/* Bottom Grid */
+.planning-bottom-grid {
+  display: grid;
+  gap: 1.25rem;
+  align-items: stretch;
+}
+
+.planning-bottom-grid > .planning-chart-card,
+.planning-bottom-grid > .planning-insight-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.planning-bottom-grid > .planning-chart-card .distribution-layout {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+/* Insight Card */
+.planning-insight-card {
+  background: var(--color-surface-container-low);
+  border-radius: 1.25rem;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 270px;
+}
+
+.planning-insight-card__header {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.planning-insight-card__icon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 3rem;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-container));
+  color: var(--color-on-primary-container);
+  flex-shrink: 0;
+}
+
+.planning-insight-card__body {
+  color: var(--color-on-surface-variant);
+  line-height: 1.55;
+  margin: 0;
+  flex: 1;
+}
+
+.planning-insight-card__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--color-on-surface);
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.15s;
+  background: none;
+  border: none;
+  padding: 0;
+  border-radius: 0;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 0.9375rem;
+  justify-content: flex-start;
+}
+
+.planning-insight-card__link:hover {
+  color: var(--color-secondary);
+}
+
+/* Mini KPIs */
+.planning-mini-kpi-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.planning-mini-kpi {
+  background: var(--color-surface-container-high);
+  border-radius: 1.25rem;
+  padding: 1.25rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.planning-mini-kpi:hover {
+  background: var(--color-surface-bright);
+}
+
+.planning-mini-kpi__icon {
+  margin-bottom: 0.25rem;
+}
+
+.planning-mini-kpi__label {
+  color: var(--color-on-surface-muted);
+  letter-spacing: 0.06em;
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.planning-mini-kpi__value {
+  margin: 0;
+  line-height: 1.2;
+}
+
+/* Tooltip (ApexCharts custom) */
+.planning-tooltip {
+  background: var(--color-surface-container-highest);
+  border-radius: 0.75rem;
+  padding: 0.6rem 0.85rem;
+  display: grid;
+  gap: 0.15rem;
+  box-shadow: var(--shadow-float);
+}
+
+.planning-tooltip__label {
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--color-on-surface-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.planning-tooltip__value {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--color-secondary);
+}
+
+/* ============================================================
+   SAVINGS INSIGHTS PANEL
+   ============================================================ */
+.savings-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(14, 14, 14, 0.6);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.savings-panel {
+  width: min(480px, 100%);
+  height: 100%;
+  background: var(--color-surface-container-low);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: savings-slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes savings-slide-in {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+.savings-fade-enter-active { transition: opacity 0.25s ease; }
+.savings-fade-leave-active { transition: opacity 0.2s ease; }
+.savings-fade-enter-from,
+.savings-fade-leave-to { opacity: 0; }
+
+.savings-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--color-surface-container-highest);
+}
+
+.savings-panel__icon {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, var(--color-secondary), var(--color-secondary-container));
+  color: var(--color-on-secondary-container);
+}
+
+.savings-panel__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem 1.5rem 2rem;
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+}
+
+/* Individual tip cards */
+.savings-tip {
+  display: flex;
+  gap: 1rem;
+  padding: 1.15rem;
+  background: var(--color-surface-container);
+  border-radius: 1rem;
+  transition: background 0.15s ease;
+}
+
+.savings-tip:hover {
+  background: var(--color-surface-container-high);
+}
+
+.savings-tip__icon-wrap {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 0.75rem;
+  flex-shrink: 0;
+}
+
+.savings-tip__icon--pace   { background: rgba(68, 221, 193, 0.12); color: var(--color-secondary); }
+.savings-tip__icon--spike  { background: rgba(255, 180, 171, 0.12); color: var(--color-error); }
+.savings-tip__icon--reduction { background: rgba(68, 221, 193, 0.12); color: var(--color-secondary); }
+.savings-tip__icon--subs   { background: rgba(205, 189, 255, 0.12); color: var(--color-tertiary); }
+.savings-tip__icon--days   { background: rgba(186, 195, 255, 0.12); color: var(--color-primary); }
+.savings-tip__icon--rule   { background: rgba(244, 197, 91, 0.12); color: #F4C55B; }
+
+.savings-tip__content {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.savings-tip__content .label-lg {
+  margin: 0;
+}
+
+.savings-tip__content .body-sm {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.savings-tip__action {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--color-on-surface-muted);
+  font-style: italic;
+  margin-top: 0.15rem;
+}
+
+.savings-tip__list {
+  list-style: none;
+  margin: 0.25rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.savings-tip__list li {
+  padding: 0.35rem 0.65rem;
+  background: var(--color-surface-container-high);
+  border-radius: 0.5rem;
+  font-size: 0.8125rem;
+}
+
+/* 50/30/20 rule bars */
+.savings-rule-bars {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.savings-rule-bar {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr auto;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.savings-rule-bar__track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-surface-container-highest);
+  overflow: hidden;
+}
+
+.savings-rule-bar__fill {
+  height: 100%;
+  border-radius: 999px;
+}
+
+.savings-rule-bar__fill--needs  { background: var(--color-secondary); }
+.savings-rule-bar__fill--wants  { background: var(--color-primary); }
+.savings-rule-bar__fill--savings { background: var(--color-tertiary); }
+
+/* Empty state */
+.savings-empty {
+  display: grid;
+  place-items: center;
+  gap: 1rem;
+  padding: 3rem 1rem;
+  text-align: center;
+}
+
+/* ============================================================
    RESPONSIVE
    ============================================================ */
 @media (min-width: 768px) {
@@ -757,6 +1236,22 @@ progress::-moz-progress-bar {
   .expense-row {
     grid-template-columns: 1fr auto auto;
     align-items: center;
+  }
+
+  /* Planning responsive */
+  .planning-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .planning-kpi-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .planning-bottom-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
   }
 }
 

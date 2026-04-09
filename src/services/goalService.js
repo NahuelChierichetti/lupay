@@ -26,10 +26,12 @@ export async function saveGoal(goal, spaceId = null) {
   if (!userId) throw new Error('No se detectó usuario autenticado.')
   const effectiveSpaceId = goal.space_id || spaceId
   if (!effectiveSpaceId) throw new Error('Debes seleccionar un espacio.')
-  const payload = { ...goal, user_id: userId, space_id: effectiveSpaceId }
-  if (goal.id) {
+  const { id, ...rest } = goal
+  const payload = { ...rest, user_id: userId, space_id: effectiveSpaceId }
+  if (id) {
+    payload.id = id
     const { data, error } = await supabase
-      .from(table).update(payload).eq('id', goal.id).eq('user_id', userId).select().single()
+      .from(table).update(payload).eq('id', id).eq('user_id', userId).select().single()
     if (error) throw error
     return data
   }

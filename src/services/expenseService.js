@@ -45,7 +45,7 @@ export async function listCategories(spaceId = null) {
   if (!spaceId) {
     const query = supabase
       .from(categoryTable)
-      .select('id,name,color')
+      .select('id,name,color,icon')
       .eq('user_id', userId)
       .is('space_id', null)
       .order('name')
@@ -55,7 +55,7 @@ export async function listCategories(spaceId = null) {
   }
   const query = supabase
     .from(categoryTable)
-    .select('id,name,color')
+    .select('id,name,color,icon')
     .eq('space_id', spaceId)
     .order('name')
   const { data, error } = await query
@@ -63,7 +63,7 @@ export async function listCategories(spaceId = null) {
   return data || []
 }
 
-export async function saveCategory({ id, name, color = '#6b7280', spaceId = null }) {
+export async function saveCategory({ id, name, color = '#6b7280', icon = 'shopping-bag', spaceId = null }) {
   if (!isSupabaseConfigured) throw new Error('Supabase no configurado')
   const userId = await getUserId()
   if (!userId) throw new Error('No hay usuario autenticado.')
@@ -71,17 +71,38 @@ export async function saveCategory({ id, name, color = '#6b7280', spaceId = null
   if (id) {
     let query = supabase
       .from(categoryTable)
-      .update({ name, color })
+      .update({ name, color, icon })
       .eq('id', id)
     if (!spaceId) query = query.eq('user_id', userId)
     const { data, error } = await query.select().single()
     if (error) throw error
     return data
   }
-  const payload = { user_id: userId, name, color, space_id: spaceId || null }
+  const payload = { user_id: userId, name, color, icon, space_id: spaceId || null }
   const { data, error } = await supabase.from(categoryTable).insert(payload).select().single()
   if (error) throw error
   return data
+}
+
+export async function countExpensesByCategory(categoryId) {
+  if (!isSupabaseConfigured) return 0
+  const { count, error } = await supabase
+    .from(table)
+    .select('id', { count: 'exact', head: true })
+    .eq('category_id', categoryId)
+  if (error) throw error
+  return count || 0
+}
+
+export async function reassignExpenses(fromCategoryId, toCategoryId = null) {
+  if (!isSupabaseConfigured) throw new Error('Supabase no configurado')
+  const payload = { category_id: toCategoryId }
+  if (!toCategoryId) payload.category = null
+  const { error } = await supabase
+    .from(table)
+    .update(payload)
+    .eq('category_id', fromCategoryId)
+  if (error) throw error
 }
 
 export async function deleteCategory(id, spaceId = null) {

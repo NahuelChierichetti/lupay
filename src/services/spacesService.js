@@ -183,6 +183,16 @@ export async function removeSpaceMember(memberId) {
   if (error) throw error
 }
 
+export async function cancelSpaceInvite(inviteId) {
+  if (!isSupabaseConfigured) throw new Error('Supabase no configurado')
+  const { error } = await supabase
+    .from('collaborators')
+    .delete()
+    .eq('id', inviteId)
+    .eq('status', 'pending')
+  if (error) throw error
+}
+
 // ── Space expenses ───────────────────────────────────────────────────────────
 
 export async function listSpaceExpenses(spaceId) {

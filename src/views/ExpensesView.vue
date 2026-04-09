@@ -559,7 +559,7 @@ function sortLabel(field) {
 <style scoped>
 /* ── Page layout ──────────────────────────────────────────────────────────── */
 .expenses-page {
-  padding: 2rem 1.5rem;
+  /* padding: 2rem 1.5rem; */
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -567,9 +567,9 @@ function sortLabel(field) {
   background: var(--color-surface);
 }
 
-@media (min-width: 768px) {
+/* @media (min-width: 768px) {
   .expenses-page { padding: 2.5rem 2.5rem; }
-}
+} */
 
 .page-header {
   display: flex;

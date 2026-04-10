@@ -664,8 +664,10 @@ function sortLabel(field) {
 .table-wrap {
   background: var(--color-surface-container-high);
   border-radius: 1rem;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   box-shadow: var(--shadow-card);
+  -webkit-overflow-scrolling: touch;
 }
 
 .expenses-table {

@@ -11,6 +11,8 @@ const auth = useAuthStore()
 const { add: addToast } = useToast()
 const mode = ref('login')
 const loading = ref(false)
+const showPassword = ref(false)
+const showConfirmPassword = ref(false)
 
 const form = reactive({
   fullName: '',
@@ -30,6 +32,8 @@ function switchMode(newMode) {
   fieldErrors.confirmPassword = ''
   form.password = ''
   form.confirmPassword = ''
+  showPassword.value = false
+  showConfirmPassword.value = false
   auth.error = ''
 }
 
@@ -90,34 +94,38 @@ async function submit() {
 
 <template>
   <main class="auth-screen">
-    <!-- Brand header -->
+    <!-- Background ambient blobs -->
+    <div class="bg-blob bg-blob--1" aria-hidden="true"></div>
+    <div class="bg-blob bg-blob--2" aria-hidden="true"></div>
+
+    <!-- Brand -->
     <header class="auth-brand">
-      <div class="auth-logo">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/>
-          <polyline points="16 7 22 7 22 13"/>
-        </svg>
-      </div>
-      <h1 class="auth-app-name">Lupay</h1>
+      <h1 class="auth-app-name italic px-2">LUPAY</h1>
       <p class="auth-tagline">
-        {{ mode === 'login' ? 'Gestiona tus finanzas con Lupay' : 'Crea tu espacio financiero' }}
+        {{ mode === 'login' ? 'Accedé a tu espacio financiero.' : 'Creá tu espacio financiero.' }}
       </p>
     </header>
 
-    <!-- Form card -->
+    <!-- Card -->
     <section class="auth-card">
       <h2 class="auth-card__title">
-        {{ mode === 'login' ? 'Iniciar sesion' : 'Crear cuenta' }}
+        {{ mode === 'login' ? 'Bienvenido nuevamente' : 'Crear cuenta' }}
       </h2>
+      <p class="auth-card__sub">
+        {{ mode === 'login'
+          ? 'Ingresá tus datos para acceder a tu espacio financiero.'
+          : 'Completá el formulario para comenzar.' }}
+      </p>
 
       <form class="auth-form" @submit.prevent="submit" novalidate>
+
         <!-- Full name (register only) -->
         <div v-if="mode === 'register'" class="auth-field">
           <label class="auth-label">Nombre completo</label>
           <input
             v-model="form.fullName"
             type="text"
-            placeholder="Juan Garcia"
+            placeholder="Juan García"
             required
             autocomplete="name"
             class="auth-input"
@@ -126,11 +134,11 @@ async function submit() {
 
         <!-- Email -->
         <div class="auth-field">
-          <label class="auth-label">Correo electronico</label>
+          <label class="auth-label">Correo electrónico</label>
           <input
             v-model="form.email"
             type="email"
-            placeholder="juan.garcia@email.com"
+            placeholder="nombre@atelier.com"
             required
             autocomplete="email"
             class="auth-input"
@@ -139,130 +147,173 @@ async function submit() {
 
         <!-- Password -->
         <div class="auth-field">
-          <label class="auth-label">Contrasena</label>
-          <input
-            v-model="form.password"
-            type="password"
-            :placeholder="mode === 'register' ? 'Minimo 6 caracteres' : '••••••••'"
-            required
-            autocomplete="current-password"
-            class="auth-input"
-            :class="{ 'auth-input--error': fieldErrors.password }"
-            @input="fieldErrors.password = ''"
-          />
+          <label class="auth-label">Contraseña</label>
+          <div class="input-wrapper">
+            <input
+              v-model="form.password"
+              :type="showPassword ? 'text' : 'password'"
+              :placeholder="mode === 'register' ? 'Mínimo 6 caracteres' : '••••••••'"
+              required
+              autocomplete="current-password"
+              class="auth-input"
+              :class="{ 'auth-input--error': fieldErrors.password }"
+              @input="fieldErrors.password = ''"
+            />
+            <button type="button" class="input-eye" tabindex="-1" @click="showPassword = !showPassword">
+              <svg v-if="showPassword" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+              <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
           <p v-if="fieldErrors.password" class="auth-field__error">{{ fieldErrors.password }}</p>
         </div>
 
         <!-- Confirm password (register only) -->
         <div v-if="mode === 'register'" class="auth-field">
-          <label class="auth-label">Confirmar contrasena</label>
-          <input
-            v-model="form.confirmPassword"
-            type="password"
-            placeholder="Repite tu contrasena"
-            required
-            autocomplete="new-password"
-            class="auth-input"
-            :class="{ 'auth-input--error': fieldErrors.confirmPassword }"
-            @input="fieldErrors.confirmPassword = ''"
-          />
+          <label class="auth-label">Confirmar contraseña</label>
+          <div class="input-wrapper">
+            <input
+              v-model="form.confirmPassword"
+              :type="showConfirmPassword ? 'text' : 'password'"
+              placeholder="Repetí tu contraseña"
+              required
+              autocomplete="new-password"
+              class="auth-input"
+              :class="{ 'auth-input--error': fieldErrors.confirmPassword }"
+              @input="fieldErrors.confirmPassword = ''"
+            />
+            <button type="button" class="input-eye" tabindex="-1" @click="showConfirmPassword = !showConfirmPassword">
+              <svg v-if="showConfirmPassword" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+              <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
           <p v-if="fieldErrors.confirmPassword" class="auth-field__error">{{ fieldErrors.confirmPassword }}</p>
         </div>
 
-        <!-- Submit button -->
+        <!-- Submit -->
         <button type="submit" class="auth-btn" :disabled="loading">
           <span v-if="loading" class="auth-btn__spinner" aria-hidden="true"></span>
-          <span>{{ mode === 'login' ? 'Ingresar' : 'Crear cuenta' }}</span>
+          <span class="!text-[#0e1a6e]">{{ mode === 'login' ? 'Ingresar' : 'Crear cuenta' }}</span>
         </button>
       </form>
 
       <!-- Mode switcher -->
       <p class="auth-switch">
         <template v-if="mode === 'login'">
-          No tienes cuenta?
+          ¿No tenés cuenta?
           <button type="button" class="auth-switch__link" @click="switchMode('register')">Registrate</button>
         </template>
         <template v-else>
-          Ya tienes cuenta?
-          <button type="button" class="auth-switch__link" @click="switchMode('login')">Inicia sesion</button>
+          ¿Ya tenés cuenta?
+          <button type="button" class="auth-switch__link" @click="switchMode('login')">Iniciá sesión</button>
         </template>
       </p>
     </section>
+
+    <!-- Footer -->
+    <footer class="auth-footer">
+      <span class="auth-footer__dot"></span>
+      <span>LUPAY - Gestor Financiero</span>
+      <span class="auth-footer__sep">·</span>
+      <span>V1.0.0</span>
+    </footer>
   </main>
 </template>
 
 <style scoped>
-/* Brand */
+/* ── Screen ───────────────────────────────────────────────────────────────── */
 .auth-screen {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 1.5rem 1rem;
-  gap: 1.5rem;
-  background: #f2f5fb;
+  padding: 2rem 1rem;
+  gap: 1.75rem;
+  background: var(--color-surface-dim);
+  position: relative;
+  overflow: hidden;
 }
 
+/* Ambient background blobs */
+.bg-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: 0;
+}
+.bg-blob--1 {
+  width: 400px; height: 400px;
+  background: rgba(31, 50, 151, 0.25);
+  top: -120px; left: -100px;
+}
+.bg-blob--2 {
+  width: 300px; height: 300px;
+  background: rgba(68, 221, 193, 0.07);
+  bottom: -80px; right: -60px;
+}
+
+/* ── Brand ────────────────────────────────────────────────────────────────── */
 .auth-brand {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.35rem;
-}
-
-.auth-logo {
-  width: 3rem;
-  height: 3rem;
-  background: #ABBF7E;
-  border-radius: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #0D0D0D;
-  box-shadow: 0 4px 12px rgba(74, 158, 119, 0.35);
-}
-
-.auth-logo svg {
-  width: 1.5rem;
-  height: 1.5rem;
+  gap: 6px;
+  position: relative;
+  z-index: 1;
 }
 
 .auth-app-name {
   margin: 0;
-  font-size: 1.6rem;
-  font-weight: 700;
-  color: #0D0D0D;
-  letter-spacing: -0.02em;
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--color-primary);
+  letter-spacing: -0.03em;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-tertiary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .auth-tagline {
   margin: 0;
-  color: #64748b;
-  font-size: 0.95rem;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--color-on-surface-muted);
 }
 
-/* Card */
+/* ── Card ─────────────────────────────────────────────────────────────────── */
 .auth-card {
-  width: min(420px, 100%);
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  padding: 1.75rem 1.5rem;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.07);
+  width: min(440px, 100%);
+  background: var(--color-surface-container-low);
+  border-radius: 1.5rem;
+  padding: 2rem 1.75rem;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+  box-shadow: 0px 20px 40px rgba(229, 226, 225, 0.06);
+  position: relative;
+  z-index: 1;
 }
 
 .auth-card__title {
   margin: 0;
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: #0D0D0D;
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--color-on-surface);
+  letter-spacing: -0.02em;
 }
 
-/* Form */
+.auth-card__sub {
+  margin: -0.5rem 0 0;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  color: var(--color-on-surface-variant);
+}
+
+/* ── Form ─────────────────────────────────────────────────────────────────── */
 .auth-form {
   display: flex;
   flex-direction: column;
@@ -272,116 +323,155 @@ async function submit() {
 .auth-field {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 6px;
 }
 
 .auth-label {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #0D0D0D;
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.input-wrapper {
+  position: relative;
 }
 
 .auth-input {
-  border: 1px solid #cbd5e1;
-  border-radius: 10px;
-  padding: 0.7rem 0.85rem;
   width: 100%;
-  font: inherit;
-  font-size: 0.95rem;
-  background: #fff;
-  color: #0D0D0D;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  background: var(--color-surface-container-highest);
+  border: none;
+  border-bottom: 2px solid rgba(70, 70, 82, 0.3);
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  font-family: var(--font-body);
+  font-size: 0.9375rem;
+  color: var(--color-on-surface);
   outline: none;
+  transition: border-color 0.18s;
+  box-sizing: border-box;
+}
+
+.input-wrapper .auth-input {
+  padding-right: 2.75rem;
+}
+
+.auth-input::placeholder {
+  color: var(--color-on-surface-muted);
 }
 
 .auth-input:focus {
-  border-color: #EEF266;
-  box-shadow: 0 0 0 3px rgba(74, 158, 119, 0.12);
+  border-bottom-color: var(--color-secondary);
 }
 
 .auth-input--error {
-  border-color: #dc2626;
+  border-bottom-color: var(--color-error) !important;
 }
 
-.auth-input--error:focus {
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
+.input-eye {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: var(--color-on-surface-muted);
+  display: flex;
+  align-items: center;
+  transition: color 0.15s;
 }
+.input-eye:hover { color: var(--color-on-surface-variant); }
 
 .auth-field__error {
   margin: 0;
+  font-family: var(--font-body);
   font-size: 0.8rem;
-  color: #dc2626;
+  color: var(--color-error);
 }
 
-/* Button */
+/* ── Submit button ────────────────────────────────────────────────────────── */
 .auth-btn {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  background: #ABBF7E;
-  color: #0D0D0D;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
   border: none;
-  border-radius: 10px;
-  padding: 0.8rem 1rem;
-  font: inherit;
+  border-radius: 3rem;
+  padding: 0.85rem 1rem;
+  font-family: var(--font-display);
   font-size: 0.95rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   width: 100%;
   margin-top: 0.25rem;
-  transition: background 0.15s, opacity 0.15s, transform 0.1s;
+  transition: opacity 0.18s, transform 0.1s;
+  letter-spacing: 0.01em;
 }
-
-.auth-btn:hover:not(:disabled) {
-  background: #EEF266;
-}
-
-.auth-btn:active:not(:disabled) {
-  transform: scale(0.98);
-}
-
-.auth-btn:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
+.auth-btn:hover:not(:disabled) { opacity: 0.9; }
+.auth-btn:active:not(:disabled) { transform: scale(0.98); }
+.auth-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .auth-btn__spinner {
   width: 1rem;
   height: 1rem;
-  border: 2px solid rgba(255, 255, 255, 0.4);
+  border: 2px solid rgba(255, 255, 255, 0.3);
   border-top-color: #fff;
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
   flex-shrink: 0;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
+@keyframes spin { to { transform: rotate(360deg); } }
 
-/* Switch link */
+/* ── Mode switcher ────────────────────────────────────────────────────────── */
 .auth-switch {
   margin: 0;
   text-align: center;
-  font-size: 0.9rem;
-  color: #64748b;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  color: var(--color-on-surface-muted);
 }
 
 .auth-switch__link {
   background: none;
   border: none;
   padding: 0;
-  color: #ABBF7E;
+  color: var(--color-primary);
   font: inherit;
   font-weight: 600;
   cursor: pointer;
-  text-decoration: none;
   transition: color 0.15s;
 }
+.auth-switch__link:hover { color: var(--color-tertiary); }
 
-.auth-switch__link:hover {
-  color: #EEF266;
-  text-decoration: underline;
+/* ── Footer ───────────────────────────────────────────────────────────────── */
+.auth-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-on-surface-muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  position: relative;
+  z-index: 1;
 }
+
+.auth-footer__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-secondary);
+  box-shadow: 0 0 8px var(--color-secondary);
+}
+
+.auth-footer__sep { opacity: 0.4; }
 </style>

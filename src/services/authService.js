@@ -75,3 +75,17 @@ export function onAuthStateChange(callback) {
   if (!isSupabaseConfigured) return { data: { subscription: { unsubscribe: () => {} } } }
   return supabase.auth.onAuthStateChange(callback)
 }
+
+export async function updatePassword(newPassword) {
+  if (!isSupabaseConfigured) throw new Error('Supabase no está configurado.')
+  const { data, error } = await supabase.auth.updateUser({ password: newPassword })
+  if (error) throw error
+  return data
+}
+
+export async function deactivateAccount() {
+  if (!isSupabaseConfigured) throw new Error('Supabase no está configurado.')
+  const { error } = await supabase.auth.updateUser({ data: { deactivated: true } })
+  if (error) throw error
+  await supabase.auth.signOut()
+}

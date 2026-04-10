@@ -96,10 +96,11 @@ async function logout() {
     <aside class="sidebar">
       <div class="sidebar-logo">
         <div class="logo-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <!-- <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
             <polyline points="17 6 23 6 23 12"/>
-          </svg>
+          </svg> -->
+          <img src="/src/utils/logo-lupay.png" alt="LUPAY" width="20" height="20" />
         </div>
         <div class="logo-text-block">
           <span class="logo-text italic">LUPAY</span>
@@ -315,7 +316,7 @@ async function logout() {
 .logo-icon {
   width: 36px;
   height: 36px;
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-container) 100%);
+  background: #fff;
   border-radius: 10px;
   display: flex;
   align-items: center;
@@ -730,11 +731,7 @@ async function logout() {
 
 /* ── Content ────────────────────────────────────────────────────────────── */
 .content {
-  padding: 1.5rem 1.25rem;
+  padding: 2rem;
   flex: 1;
-}
-
-@media (min-width: 768px) {
-  .content { padding: 2rem 2.5rem; }
 }
 </style>

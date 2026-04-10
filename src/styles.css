@@ -1,7 +1,7 @@
 @import 'tailwindcss';
 
 /* ============================================================
-   FINANCIAL ATELIER — Design System Tokens (Tailwind v4 @theme)
+   FINANCIAL PLANNING — Design System Tokens (Tailwind v4 @theme)
    ============================================================ */
 @theme {
   /* --- Fonts --- */
@@ -531,7 +531,6 @@ select option {
 }
 
 .content {
-  padding: 1.5rem 1rem;
   background: var(--color-surface);
   min-height: calc(100dvh - 4.5rem);
   flex: 1;
@@ -1218,10 +1217,6 @@ progress::-moz-progress-bar {
 
   .app-shell {
     grid-template-columns: 260px 1fr;
-  }
-
-  .content {
-    padding: 2rem 2.5rem;
   }
 
   .dashboard-grid {

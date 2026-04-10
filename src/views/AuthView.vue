@@ -138,7 +138,7 @@ async function submit() {
           <input
             v-model="form.email"
             type="email"
-            placeholder="nombre@atelier.com"
+            placeholder="nombre@lupay.com"
             required
             autocomplete="email"
             class="auth-input"

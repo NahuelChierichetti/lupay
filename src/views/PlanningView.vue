@@ -240,7 +240,7 @@ const insightPeriodLabel = computed(() => {
     <div class="planning-bottom-grid">
       <PlanningDistributionChart :values="byCategory" />
 
-      <!-- Atelier Analysis -->
+      <!-- Analysis -->
       <article class="planning-insight-card">
         <div class="planning-insight-card__header">
           <span class="planning-insight-card__icon">

@@ -20,7 +20,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
 // Change this to your verified Resend sender domain in production.
 // Para producción: reemplazá con tu dominio verificado en resend.com/domains
-// Ej: 'FinanzApp <invitaciones@tudominio.com>'
+// Ej: 'LUPAY <invitaciones@tudominio.com>'
 const FROM_EMAIL = 'LUPAY <onboarding@resend.dev>'
 
 serve(async (req: Request) => {

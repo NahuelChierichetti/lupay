@@ -103,7 +103,8 @@ async function submit() {
 
     if (mode.value === 'reset') {
       await auth.resetPassword(form.password)
-      addToast('Contraseña actualizada correctamente. Ya podés iniciar sesión.', 'success')
+      await auth.logout()
+      addToast('Contraseña actualizada correctamente. Iniciá sesión con tu nueva contraseña.', 'success')
       switchMode('login')
       await router.replace({ name: 'auth', query: { mode: 'login' }, hash: '' })
       return
@@ -172,7 +173,7 @@ async function submit() {
       <form class="auth-form" @submit.prevent="submit" novalidate>
 
         <!-- Full name (register only) -->
-        <div v-if="mode === 'register' || mode === 'reset'" class="auth-field">
+        <div v-if="mode === 'register'" class="auth-field">
           <label class="auth-label">Nombre completo</label>
           <input
             v-model="form.fullName"
@@ -207,9 +208,9 @@ async function submit() {
             <input
               v-model="form.password"
               :type="showPassword ? 'text' : 'password'"
-              :placeholder="mode === 'register' ? 'Mínimo 6 caracteres' : '••••••••'"
+              :placeholder="mode === 'reset' ? 'Ingresá tu nueva contraseña' : mode === 'register' ? 'Mínimo 6 caracteres' : '••••••••'"
               required
-              :autocomplete="mode === 'register' ? 'new-password' : 'current-password'"
+              :autocomplete="mode === 'login' ? 'current-password' : 'new-password'"
               class="auth-input"
               :class="{ 'auth-input--error': fieldErrors.password }"
               @input="fieldErrors.password = ''"
@@ -223,8 +224,8 @@ async function submit() {
           <button v-if="mode === 'login'" type="button" class="auth-forgot" @click="switchMode('recover')">¿Olvidaste tu contraseña?</button>
         </div>
 
-        <!-- Confirm password (register only) -->
-        <div v-if="mode === 'register'" class="auth-field">
+        <!-- Confirm password (register/reset) -->
+        <div v-if="mode === 'register' || mode === 'reset'" class="auth-field">
           <label class="auth-label">Confirmar contraseña</label>
           <div class="input-wrapper">
             <input
@@ -264,7 +265,7 @@ async function submit() {
         </template>
         <template v-else>
           {{ mode === 'recover' ? '¿Recordaste tu contraseña?' : '¿Preferís volver al login?' }}
-          <button type="button" class="auth-switch__link" @click="switchMode('login')">Volver a login</button>
+          <button type="button" class="auth-switch__link" @click="switchMode('login')">Volver a iniciar sesión</button>
         </template>
       </p>
     </section>

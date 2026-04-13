@@ -43,9 +43,13 @@ router.beforeEach(async (to) => {
   if (!isSupabaseConfigured) return true
   const session = await getSession()
   const isAuthenticated = Boolean(session?.user)
+  const isRecoveryFlow =
+    to.name === 'auth' &&
+    (to.query.mode === 'reset' || to.query.type === 'recovery' || String(to.hash || '').includes('type=recovery'))
+
   if (to.meta.requiresAuth && !isAuthenticated) return { name: 'auth' }
-  // Don't redirect authenticated users away from /invite — they may be accepting an invite
-  if (to.meta.requiresGuest && isAuthenticated && to.name !== 'invite') return { name: 'espacios' }
+  // Don't redirect authenticated users away from /invite or /auth reset flow
+  if (to.meta.requiresGuest && isAuthenticated && to.name !== 'invite' && !isRecoveryFlow) return { name: 'espacios' }
   return true
 })
 

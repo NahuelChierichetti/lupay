@@ -34,6 +34,8 @@ const router = createRouter({
         { path: 'espacios/:id', name: 'espacio', component: SpaceDetailView },
       ],
     },
+    // Any unknown route goes through auth flow.
+    { path: '/:pathMatch(.*)*', redirect: { name: 'auth' } },
   ],
 })
 

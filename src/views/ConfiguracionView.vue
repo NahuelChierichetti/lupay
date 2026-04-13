@@ -187,6 +187,37 @@ const workspaceUsers = ref([])
 const inviteForm = reactive({ email: '', role: 'viewer' })
 const inviteError = ref('')
 const inviteLoading = ref(false)
+const latestInvite = reactive({ email: '', link: '' })
+
+function buildInviteLink(token) {
+  if (!token) return ''
+  return `${window.location.origin}/invite?token=${token}`
+}
+
+async function copyInviteLink() {
+  if (!latestInvite.link) return
+  try {
+    await navigator.clipboard.writeText(latestInvite.link)
+    showToast('Link de invitación copiado')
+  } catch {
+    inviteError.value = 'No se pudo copiar el link automáticamente.'
+  }
+}
+
+async function shareInviteLink() {
+  if (!latestInvite.link) return
+  if (!navigator.share) {
+    await copyInviteLink()
+    return
+  }
+  try {
+    await navigator.share({
+      title: 'Invitación a LUPAY',
+      text: 'Te comparto un link para registrarte y aceptar mi invitación.',
+      url: latestInvite.link,
+    })
+  } catch (_) {}
+}
 
 async function submitInvite() {
   const email = inviteForm.email.trim()
@@ -194,24 +225,28 @@ async function submitInvite() {
   inviteLoading.value = true
   inviteError.value = ''
   try {
+    let saved = null
     if (isSpaceContext.value) {
-      await inviteToSpace(currentSpaceId.value, email, inviteForm.role)
+      saved = await inviteToSpace(currentSpaceId.value, email, inviteForm.role)
       const [members, pending] = await Promise.all([
         listWorkspaceUsers(currentSpaceId.value).catch(() => []),
         listSpacePendingInvites(currentSpaceId.value).catch(() => []),
       ])
       workspaceUsers.value = [...members, ...pending]
     } else {
-      const saved = await inviteCollaborator(email, inviteForm.role)
+      saved = await inviteCollaborator(email, inviteForm.role)
       const idx = collaborators.value.findIndex((c) => c.id === saved.id)
       if (idx >= 0) collaborators.value[idx] = saved
       else collaborators.value.push(saved)
     }
+
+    latestInvite.email = email
+    latestInvite.link = saved?.invite_url || buildInviteLink(saved?.invite_token)
     inviteForm.email = ''
     inviteForm.role = 'viewer'
-    showToast(`Invitacion enviada a ${email}`)
+    showToast(latestInvite.link ? `Invitación creada para ${email}. Compartí el link.` : `Invitación creada para ${email}`)
   } catch (err) {
-    inviteError.value = err.message || 'No se pudo enviar la invitacion'
+    inviteError.value = err.message || 'No se pudo crear la invitación'
   } finally {
     inviteLoading.value = false
   }
@@ -538,6 +573,9 @@ watch(
         <!-- Invite form -->
         <div v-if="canEdit" class="invite-card">
           <h3 class="invite-title">Invitar Colaborador</h3>
+          <p class="invite-manual-note">
+            El envío automático por email está pausado. Crearemos un link para que se lo compartas al invitado.
+          </p>
 
           <div class="form-field">
             <label>Email del invitado</label>
@@ -564,9 +602,14 @@ watch(
 
           <p v-if="inviteError" class="form-error">{{ inviteError }}</p>
 
-          <!-- <p class="invite-hint">
-            "Los invitados recibiran un link de acceso para unirse al espacio financiero."
-          </p> -->
+          <div v-if="latestInvite.link" class="invite-link-box">
+            <label>Link para {{ latestInvite.email }}</label>
+            <input :value="latestInvite.link" readonly />
+            <div class="invite-link-actions">
+              <button class="btn-ghost" @click="copyInviteLink">Copiar link</button>
+              <button class="btn-primary" @click="shareInviteLink">Compartir</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -1140,6 +1183,14 @@ watch(
   margin: 0;
 }
 
+.invite-manual-note {
+  margin: -6px 0 0;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  color: var(--color-on-surface-muted);
+  line-height: 1.45;
+}
+
 .btn-invite {
   display: inline-flex;
   align-items: center;
@@ -1160,6 +1211,38 @@ watch(
 
 .btn-invite:hover:not(:disabled) { opacity: 0.9; }
 .btn-invite:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.invite-link-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--color-surface-container);
+  border-radius: 0.75rem;
+  padding: 0.85rem;
+}
+
+.invite-link-box label {
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-on-surface-muted);
+}
+
+.invite-link-box input {
+  background: var(--color-surface-container-high);
+  border: 1px solid var(--color-outline-variant);
+  border-radius: 0.625rem;
+  padding: 0.625rem 0.75rem;
+  color: var(--color-on-surface);
+  font-size: 0.8rem;
+}
+
+.invite-link-actions {
+  display: flex;
+  gap: 8px;
+}
 
 .invite-hint {
   font-family: var(--font-body);

@@ -1,5 +1,7 @@
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
 
+const INVITE_EMAIL_ENABLED = String(import.meta.env.VITE_ENABLE_INVITE_EMAIL || 'false') === 'true'
+
 async function getUserId() {
   if (!isSupabaseConfigured) return null
   const { data } = await supabase.auth.getUser()
@@ -263,23 +265,25 @@ export async function inviteToSpace(spaceId, email, role = 'editor') {
     .single()
   if (error) throw error
 
-  // Send invitation email via Edge Function
-  const ownerName = owner.user_metadata?.full_name || owner.email?.split('@')[0] || 'Un usuario'
   const appUrl = window.location.origin
+  const inviteUrl = `${appUrl}/invite?token=${invite.invite_token}`
 
-  try {
-    await supabase.functions.invoke('send-invite', {
-      body: {
-        ownerName,
-        spaceName: space?.name || null,
-        invitedEmail: email,
-        inviteToken: invite.invite_token,
-        appUrl,
-      },
-    })
-  } catch (emailErr) {
-    console.warn('No se pudo enviar el email:', emailErr)
+  if (INVITE_EMAIL_ENABLED) {
+    const ownerName = owner.user_metadata?.full_name || owner.email?.split('@')[0] || 'Un usuario'
+    try {
+      await supabase.functions.invoke('send-invite', {
+        body: {
+          ownerName,
+          spaceName: space?.name || null,
+          invitedEmail: email,
+          inviteToken: invite.invite_token,
+          appUrl,
+        },
+      })
+    } catch (emailErr) {
+      console.warn('No se pudo enviar el email:', emailErr)
+    }
   }
 
-  return invite
+  return { ...invite, invite_url: inviteUrl }
 }

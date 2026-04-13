@@ -1,6 +1,7 @@
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
 
 const table = 'collaborators'
+const INVITE_EMAIL_ENABLED = String(import.meta.env.VITE_ENABLE_INVITE_EMAIL || 'false') === 'true'
 
 async function getOwnerId() {
   if (!isSupabaseConfigured) return null
@@ -56,26 +57,27 @@ export async function inviteCollaborator(email, role = 'editor') {
     .single()
   if (error) throw error
 
-  // Send invitation email via Edge Function
-  const ownerName =
-    user.user_metadata?.full_name || user.email?.split('@')[0] || 'Un usuario'
   const appUrl = window.location.origin
+  const inviteUrl = `${appUrl}/invite?token=${data.invite_token}`
 
-  try {
-    await supabase.functions.invoke('send-invite', {
-      body: {
-        ownerName,
-        invitedEmail: email,
-        inviteToken: data.invite_token,
-        appUrl,
-      },
-    })
-  } catch (emailErr) {
-    // Don't block the flow if the email fails — the invite record was created
-    console.warn('No se pudo enviar el email de invitación:', emailErr)
+  if (INVITE_EMAIL_ENABLED) {
+    const ownerName =
+      user.user_metadata?.full_name || user.email?.split('@')[0] || 'Un usuario'
+    try {
+      await supabase.functions.invoke('send-invite', {
+        body: {
+          ownerName,
+          invitedEmail: email,
+          inviteToken: data.invite_token,
+          appUrl,
+        },
+      })
+    } catch (emailErr) {
+      console.warn('No se pudo enviar el email de invitación:', emailErr)
+    }
   }
 
-  return data
+  return { ...data, invite_url: inviteUrl }
 }
 
 export async function removeCollaborator(id) {

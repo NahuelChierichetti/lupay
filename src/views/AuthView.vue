@@ -1,5 +1,5 @@
 <script setup>
-import { reactive, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../store/useAuthStore'
 import { getOrCreateProfile } from '../services/profileService'
@@ -22,12 +22,18 @@ const form = reactive({
 })
 
 const fieldErrors = reactive({
+  email: '',
   password: '',
   confirmPassword: '',
 })
 
+function normalizeMode(value) {
+  return ['login', 'register', 'recover', 'reset'].includes(value) ? value : 'login'
+}
+
 function switchMode(newMode) {
-  mode.value = newMode
+  mode.value = normalizeMode(newMode)
+  fieldErrors.email = ''
   fieldErrors.password = ''
   fieldErrors.confirmPassword = ''
   form.password = ''
@@ -37,16 +43,37 @@ function switchMode(newMode) {
   auth.error = ''
 }
 
+onMounted(() => {
+  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+  const isRecoveryLink = hashParams.get('type') === 'recovery' || route.query.type === 'recovery'
+
+  if (isRecoveryLink) {
+    switchMode('reset')
+    addToast('Ingresá tu nueva contraseña para finalizar el recupero.', 'success')
+    return
+  }
+
+  switchMode(normalizeMode(route.query.mode))
+})
+
 function validateForm() {
+  fieldErrors.email = ''
   fieldErrors.password = ''
   fieldErrors.confirmPassword = ''
+
+  if (mode.value !== 'reset' && !form.email.trim()) {
+    fieldErrors.email = 'Ingresá tu correo electrónico'
+    return false
+  }
+
+  if (mode.value === 'recover') return true
 
   if (form.password.length < 6) {
     fieldErrors.password = 'Mínimo 6 caracteres'
     return false
   }
 
-  if (mode.value === 'register') {
+  if (mode.value === 'register' || mode.value === 'reset') {
     if (!form.confirmPassword) {
       fieldErrors.confirmPassword = 'Confirmá tu contraseña'
       return false
@@ -67,6 +94,21 @@ async function submit() {
   auth.error = ''
 
   try {
+    if (mode.value === 'recover') {
+      await auth.recoverPassword(form.email, `${window.location.origin}/auth?mode=reset`)
+      addToast('Te enviamos un enlace de recuperación. Revisá tu correo personal.', 'success')
+      switchMode('login')
+      return
+    }
+
+    if (mode.value === 'reset') {
+      await auth.resetPassword(form.password)
+      addToast('Contraseña actualizada correctamente. Ya podés iniciar sesión.', 'success')
+      switchMode('login')
+      await router.replace({ name: 'auth', query: { mode: 'login' }, hash: '' })
+      return
+    }
+
     const redirectTo = route.query.redirect || sessionStorage.getItem('pendingInviteToken')
       ? (route.query.redirect || `/invite?token=${sessionStorage.getItem('pendingInviteToken')}`)
       : '/'
@@ -79,9 +121,9 @@ async function submit() {
       router.push(redirectTo)
     } else {
       await auth.register(form.email, form.password, form.fullName)
-      try { await getOrCreateProfile() } catch (_) {}
-      addToast('Cuenta creada exitosamente. ¡Bienvenido!', 'success')
-      router.push(redirectTo)
+      if (auth.isAuthenticated) await auth.logout()
+      addToast('Registro exitoso. Validá tu correo personal y luego iniciá sesión.', 'success')
+      switchMode('login')
     }
   } catch (err) {
     const message = auth.error || err?.message || 'Ocurrió un error inesperado'
@@ -102,25 +144,35 @@ async function submit() {
     <header class="auth-brand">
       <h1 class="auth-app-name italic px-2">LUPAY</h1>
       <p class="auth-tagline">
-        {{ mode === 'login' ? 'Accedé a tu espacio financiero.' : 'Creá tu espacio financiero.' }}
+        {{ mode === 'login'
+          ? 'Accedé a tu espacio financiero.'
+          : mode === 'register'
+            ? 'Creá tu espacio financiero.'
+            : mode === 'recover'
+              ? 'Recuperá el acceso a tu cuenta.'
+              : 'Definí tu nueva contraseña.' }}
       </p>
     </header>
 
     <!-- Card -->
     <section class="auth-card">
       <h2 class="auth-card__title">
-        {{ mode === 'login' ? 'Bienvenido nuevamente' : 'Crear cuenta' }}
+        {{ mode === 'login' ? 'Bienvenido nuevamente' : mode === 'register' ? 'Crear cuenta' : mode === 'recover' ? 'Recuperar contraseña' : 'Nueva contraseña' }}
       </h2>
       <p class="auth-card__sub">
         {{ mode === 'login'
           ? 'Ingresá tus datos para acceder a tu espacio financiero.'
-          : 'Completá el formulario para comenzar.' }}
+          : mode === 'register'
+            ? 'Completá el formulario para comenzar.'
+            : mode === 'recover'
+              ? 'Ingresá tu correo y te enviaremos un enlace de restablecimiento.'
+              : 'Ingresá y confirmá tu nueva contraseña para continuar.' }}
       </p>
 
       <form class="auth-form" @submit.prevent="submit" novalidate>
 
         <!-- Full name (register only) -->
-        <div v-if="mode === 'register'" class="auth-field">
+        <div v-if="mode === 'register' || mode === 'reset'" class="auth-field">
           <label class="auth-label">Nombre completo</label>
           <input
             v-model="form.fullName"
@@ -133,7 +185,7 @@ async function submit() {
         </div>
 
         <!-- Email -->
-        <div class="auth-field">
+        <div v-if="mode !== 'reset'" class="auth-field">
           <label class="auth-label">Correo electrónico</label>
           <input
             v-model="form.email"
@@ -142,11 +194,14 @@ async function submit() {
             required
             autocomplete="email"
             class="auth-input"
+            :class="{ 'auth-input--error': fieldErrors.email }"
+            @input="fieldErrors.email = ''"
           />
+          <p v-if="fieldErrors.email" class="auth-field__error">{{ fieldErrors.email }}</p>
         </div>
 
         <!-- Password -->
-        <div class="auth-field">
+        <div v-if="mode !== 'recover'" class="auth-field">
           <label class="auth-label">Contraseña</label>
           <div class="input-wrapper">
             <input
@@ -154,7 +209,7 @@ async function submit() {
               :type="showPassword ? 'text' : 'password'"
               :placeholder="mode === 'register' ? 'Mínimo 6 caracteres' : '••••••••'"
               required
-              autocomplete="current-password"
+              :autocomplete="mode === 'register' ? 'new-password' : 'current-password'"
               class="auth-input"
               :class="{ 'auth-input--error': fieldErrors.password }"
               @input="fieldErrors.password = ''"
@@ -165,6 +220,7 @@ async function submit() {
             </button>
           </div>
           <p v-if="fieldErrors.password" class="auth-field__error">{{ fieldErrors.password }}</p>
+          <button v-if="mode === 'login'" type="button" class="auth-forgot" @click="switchMode('recover')">¿Olvidaste tu contraseña?</button>
         </div>
 
         <!-- Confirm password (register only) -->
@@ -174,7 +230,7 @@ async function submit() {
             <input
               v-model="form.confirmPassword"
               :type="showConfirmPassword ? 'text' : 'password'"
-              placeholder="Repetí tu contraseña"
+              :placeholder="mode === 'reset' ? 'Repetí la nueva contraseña' : 'Repetí tu contraseña'"
               required
               autocomplete="new-password"
               class="auth-input"
@@ -192,7 +248,7 @@ async function submit() {
         <!-- Submit -->
         <button type="submit" class="auth-btn" :disabled="loading">
           <span v-if="loading" class="auth-btn__spinner" aria-hidden="true"></span>
-          <span class="!text-[#0e1a6e]">{{ mode === 'login' ? 'Ingresar' : 'Crear cuenta' }}</span>
+          <span class="!text-[#0e1a6e]">{{ mode === 'login' ? 'Ingresar' : mode === 'register' ? 'Crear cuenta' : mode === 'recover' ? 'Enviar enlace' : 'Actualizar contraseña' }}</span>
         </button>
       </form>
 
@@ -202,9 +258,13 @@ async function submit() {
           ¿No tenés cuenta?
           <button type="button" class="auth-switch__link" @click="switchMode('register')">Registrate</button>
         </template>
-        <template v-else>
+        <template v-else-if="mode === 'register'">
           ¿Ya tenés cuenta?
           <button type="button" class="auth-switch__link" @click="switchMode('login')">Iniciá sesión</button>
+        </template>
+        <template v-else>
+          {{ mode === 'recover' ? '¿Recordaste tu contraseña?' : '¿Preferís volver al login?' }}
+          <button type="button" class="auth-switch__link" @click="switchMode('login')">Volver a login</button>
         </template>
       </p>
     </section>
@@ -392,6 +452,19 @@ async function submit() {
   font-size: 0.8rem;
   color: var(--color-error);
 }
+
+.auth-forgot {
+  align-self: flex-start;
+  margin: 2px 0 0;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  color: var(--color-primary);
+  cursor: pointer;
+}
+.auth-forgot:hover { color: var(--color-tertiary); }
 
 /* ── Submit button ────────────────────────────────────────────────────────── */
 .auth-btn {

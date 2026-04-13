@@ -62,15 +62,18 @@ const ROLE_LABEL = { editor: 'Editor', viewer: 'Visor' }
 
 <template>
   <main class="invite-screen">
+    <div class="bg-blob bg-blob--1" aria-hidden="true"></div>
+    <div class="bg-blob bg-blob--2" aria-hidden="true"></div>
+
     <!-- Brand -->
     <div class="invite-brand">
       <div class="brand-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
           <polyline points="17 6 23 6 23 12"/>
         </svg>
       </div>
-      <span class="brand-name">FinanzApp</span>
+      <span class="brand-name">LUPAY</span>
     </div>
 
     <div class="invite-card">
@@ -175,44 +178,76 @@ const ROLE_LABEL = { editor: 'Editor', viewer: 'Visor' }
 <style scoped>
 .invite-screen {
   min-height: 100vh;
-  background: #f7f8f6;
+  background: var(--color-surface-dim);
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   padding: 40px 16px;
   gap: 28px;
+  position: relative;
+  overflow: hidden;
+}
+
+.bg-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: 0;
+}
+.bg-blob--1 {
+  width: 360px;
+  height: 360px;
+  background: rgba(31, 50, 151, 0.22);
+  top: -120px;
+  left: -90px;
+}
+.bg-blob--2 {
+  width: 280px;
+  height: 280px;
+  background: rgba(68, 221, 193, 0.1);
+  bottom: -80px;
+  right: -70px;
 }
 
 .invite-brand {
   display: flex;
   align-items: center;
   gap: 10px;
+  position: relative;
+  z-index: 1;
 }
 
 .brand-icon {
   width: 38px;
   height: 38px;
-  background: #4a7c3f;
+  background: var(--color-primary);
   border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
+  color: var(--color-on-primary);
 }
 
 .brand-name {
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: #1a1a1a;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--color-primary);
+  letter-spacing: 0.03em;
 }
 
 .invite-card {
   width: 100%;
   max-width: 460px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
+  background: var(--color-surface-container-low);
+  border: 1px solid rgba(186, 195, 255, 0.15);
   border-radius: 16px;
   padding: 32px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+  box-shadow: 0px 20px 40px rgba(229, 226, 225, 0.06);
+  position: relative;
+  z-index: 1;
 }
 
 /* ── States ── */
@@ -234,9 +269,9 @@ const ROLE_LABEL = { editor: 'Editor', viewer: 'Visor' }
   justify-content: center;
   margin-bottom: 4px;
 }
-.state-icon--success { background: #dcfce7; color: #166534; }
-.state-icon--warn { background: #fef3c7; color: #92400e; }
-.state-icon--neutral { background: #f3f4f6; color: #374151; }
+.state-icon--success { background: rgba(68, 221, 193, 0.16); color: var(--color-secondary); }
+.state-icon--warn { background: rgba(255, 180, 171, 0.14); color: var(--color-error); }
+.state-icon--neutral { background: rgba(186, 195, 255, 0.14); color: var(--color-primary); }
 
 .state-title {
   font-size: 1.125rem;
@@ -264,8 +299,8 @@ const ROLE_LABEL = { editor: 'Editor', viewer: 'Visor' }
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: #dcfce7;
-  color: #166534;
+  background: rgba(68, 221, 193, 0.16);
+  color: var(--color-secondary);
   font-size: 1.125rem;
   font-weight: 700;
   display: flex;
@@ -332,11 +367,11 @@ const ROLE_LABEL = { editor: 'Editor', viewer: 'Visor' }
   display: flex;
   gap: 10px;
   align-items: flex-start;
-  background: #fef3c7;
-  border: 1px solid #fde68a;
+  background: var(--color-error-container);
+  border: 1px solid rgba(255, 180, 171, 0.4);
   border-radius: 8px;
   padding: 12px 14px;
-  color: #92400e;
+  color: var(--color-error);
 }
 .wrong-account p { margin: 0; font-size: 0.875rem; line-height: 1.5; }
 
@@ -346,36 +381,36 @@ const ROLE_LABEL = { editor: 'Editor', viewer: 'Visor' }
   width: 100%;
   text-align: center;
   padding: 11px 20px;
-  background: #4a7c3f;
-  color: #fff;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
   border: none;
   border-radius: 8px;
   font-size: 0.9375rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   text-decoration: none;
-  transition: background 0.15s;
+  transition: opacity 0.15s;
   box-sizing: border-box;
 }
-.btn-primary:hover { background: #3d6834; }
+.btn-primary:hover { opacity: 0.9; }
 
 .btn-outline {
   display: block;
   width: 100%;
   text-align: center;
   padding: 11px 20px;
-  background: #fff;
-  color: #374151;
-  border: 1px solid #d1d5db;
+  background: var(--color-surface-bright);
+  color: var(--color-on-surface-variant);
+  border: 1px solid var(--color-surface-variant);
   border-radius: 8px;
   font-size: 0.9375rem;
   font-weight: 500;
   cursor: pointer;
   text-decoration: none;
-  transition: background 0.15s;
+  transition: opacity 0.15s;
   box-sizing: border-box;
 }
-.btn-outline:hover { background: #f9fafb; }
+.btn-outline:hover { opacity: 0.9; }
 
 .btn-danger {
   display: block;
@@ -398,8 +433,8 @@ const ROLE_LABEL = { editor: 'Editor', viewer: 'Visor' }
 .spinner {
   width: 36px;
   height: 36px;
-  border: 3px solid #e5e7eb;
-  border-top-color: #4a7c3f;
+  border: 3px solid rgba(186, 195, 255, 0.3);
+  border-top-color: var(--color-primary);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }

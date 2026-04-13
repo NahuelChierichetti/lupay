@@ -21,7 +21,7 @@ const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
 // Change this to your verified Resend sender domain in production.
 // Para producción: reemplazá con tu dominio verificado en resend.com/domains
 // Ej: 'FinanzApp <invitaciones@tudominio.com>'
-const FROM_EMAIL = 'Lupay <onboarding@resend.dev>'
+const FROM_EMAIL = 'LUPAY <onboarding@resend.dev>'
 
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -53,12 +53,12 @@ serve(async (req: Request) => {
 <body style="font-family: Inter, system-ui, sans-serif; background: #f7f8f6; margin: 0; padding: 32px 16px;">
   <div style="max-width: 480px; margin: 0 auto; background: #fff; border-radius: 16px; border: 1px solid #e5e7eb; overflow: hidden;">
     <!-- Header -->
-    <div style="background: #4a7c3f; padding: 28px 32px;">
+    <div style="background: #1f3297; padding: 28px 32px;">
       <div style="display: flex; align-items: center; gap: 10px;">
-        <div style="width: 36px; height: 36px; background: #ABBF7E; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
-          <span style="color: #fff; font-weight: 700; font-size: 18px;">F</span>
+        <div style="width: 36px; height: 36px; background: #44ddc1; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+          <span style="color: #0e1a6e; font-weight: 800; font-size: 18px;">L</span>
         </div>
-        <span style="color: #fff; font-size: 1.1rem; font-weight: 700;">FinanzApp</span>
+        <span style="color: #fff; font-size: 1.1rem; font-weight: 700;">LUPAY</span>
       </div>
     </div>
 
@@ -71,7 +71,7 @@ serve(async (req: Request) => {
       </p>
 
       <a href="${inviteUrl}"
-         style="display: inline-block; background: #4a7c3f; color: #fff; text-decoration: none;
+         style="display: inline-block; background: #1f3297; color: #fff; text-decoration: none;
                 padding: 12px 28px; border-radius: 8px; font-size: 0.9375rem; font-weight: 600;">
         Aceptar invitación
       </a>
@@ -86,7 +86,7 @@ serve(async (req: Request) => {
     <div style="padding: 16px 32px; border-top: 1px solid #e5e7eb;">
       <p style="margin: 0; font-size: 0.75rem; color: #9ca3af;">
         Si el botón no funciona, copiá este link:<br>
-        <a href="${inviteUrl}" style="color: #4a7c3f; word-break: break-all;">${inviteUrl}</a>
+        <a href="${inviteUrl}" style="color: #1f3297; word-break: break-all;">${inviteUrl}</a>
       </p>
     </div>
   </div>
@@ -102,7 +102,7 @@ serve(async (req: Request) => {
       body: JSON.stringify({
         from: FROM_EMAIL,
         to: [invitedEmail],
-        subject: `${ownerName} te invitó a colaborar en FinanzApp`,
+        subject: `${ownerName} te invitó a colaborar en LUPAY`,
         html: emailHtml,
       }),
     })

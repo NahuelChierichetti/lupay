@@ -71,6 +71,15 @@ export async function signOut() {
   if (error) throw error
 }
 
+export async function requestPasswordRecovery(email, redirectTo) {
+  if (!isSupabaseConfigured) throw new Error('Supabase no está configurado.')
+  const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo,
+  })
+  if (error) throw error
+  return data
+}
+
 export function onAuthStateChange(callback) {
   if (!isSupabaseConfigured) return { data: { subscription: { unsubscribe: () => {} } } }
   return supabase.auth.onAuthStateChange(callback)

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { getSession, getCurrentUser, onAuthStateChange, signInWithGoogle, signInWithPassword, signOut, signUpWithPassword } from '../services/authService'
+import { getSession, getCurrentUser, onAuthStateChange, requestPasswordRecovery, signInWithGoogle, signInWithPassword, signOut, signUpWithPassword, updatePassword } from '../services/authService'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -75,6 +75,30 @@ export const useAuthStore = defineStore('auth', {
         await signInWithGoogle()
       } catch (err) {
         this.error = err.message || 'No se pudo iniciar con Google'
+        throw err
+      } finally {
+        this.loading = false
+      }
+    },
+    async recoverPassword(email, redirectTo) {
+      this.loading = true
+      this.error = ''
+      try {
+        await requestPasswordRecovery(email, redirectTo)
+      } catch (err) {
+        this.error = err.message || 'No se pudo enviar el correo de recuperación'
+        throw err
+      } finally {
+        this.loading = false
+      }
+    },
+    async resetPassword(newPassword) {
+      this.loading = true
+      this.error = ''
+      try {
+        await updatePassword(newPassword)
+      } catch (err) {
+        this.error = err.message || 'No se pudo actualizar la contraseña'
         throw err
       } finally {
         this.loading = false

@@ -1,12 +1,11 @@
 <script setup>
-import { ref, computed, reactive, nextTick, onMounted, watch } from 'vue'
+import { ref, computed, reactive, nextTick, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useFinanceStore } from '../store/useFinanceStore'
 import { useAuthStore } from '../store/useAuthStore'
 import { currency, monthKey } from '../utils/finance'
 import ExpenseDrawer from '../components/ExpenseDrawer.vue'
 import { listCollaborators } from '../services/collaboratorService'
 import { listWorkspaceUsers } from '../services/spacesService'
-import { listCategories } from '../services/expenseService'
 import { useToast } from '../composables/useToast'
 import dayjs from 'dayjs'
 
@@ -16,7 +15,6 @@ const { add: addToast } = useToast()
 
 // ── Members (current user + collaborators) ────────────────────────────────
 const members = ref([])
-const categoryColorByName = ref({})
 
 async function loadMembers() {
   const me = authStore.user
@@ -60,22 +58,13 @@ function normalizeCategoryName(name) {
   return String(name || '').trim().toLowerCase()
 }
 
-async function loadCategoryColors() {
-  const cats = await listCategories(store.currentSpaceId).catch(() => [])
-  categoryColorByName.value = Object.fromEntries(
-    (cats || [])
-      .filter((c) => c?.name)
-      .map((c) => [normalizeCategoryName(c.name), c.color || '#6b7280']),
-  )
-}
-
 onMounted(() => {
   loadMembers()
-  loadCategoryColors()
+  store.refreshCategories()
 })
 
 watch(() => store.currentSpaceId, loadMembers)
-watch(() => store.currentSpaceId, loadCategoryColors)
+watch(() => store.currentSpaceId, () => store.refreshCategories())
 
 // ── Drawer ────────────────────────────────────────────────────────────────────
 const showDrawer = ref(false)
@@ -106,10 +95,26 @@ async function saveExpense(item) {
 }
 
 // ── Categories ────────────────────────────────────────────────────────────────
-const categories = computed(() => {
-  const set = new Set([...store.categories, ...store.expenses.map((e) => e.category).filter(Boolean)])
-  return set.size ? [...set] : ['Hogar', 'Comida', 'Transporte', 'Servicios']
+// Lista completa con id/nombre/color para el drawer.
+const categoryOptions = computed(() => store.categories)
+// Map nombre → color, con llaves normalizadas.
+const categoryColorByName = computed(() => {
+  const raw = store.categoryColorMap || {}
+  // Normalizamos las llaves para búsqueda insensible a caso.
+  const out = {}
+  for (const [k, v] of Object.entries(raw)) {
+    out[normalizeCategoryName(k)] = v
+  }
+  return out
 })
+
+function getExpenseCategories(expense) {
+  if (Array.isArray(expense?.categories) && expense.categories.length) {
+    return expense.categories.filter(Boolean)
+  }
+  if (expense?.category) return [expense.category]
+  return []
+}
 
 // ── Expenses for current month ────────────────────────────────────────────────
 const monthExpenses = computed(() =>
@@ -171,10 +176,46 @@ const newRow = reactive({
   amount: '',
   payment_date: dayjs().format('YYYY-MM-DD'),
   status: 'pending',
-  category: '',
+  categories: [],
   responsible_user_id: '',
   customValues: {},
 })
+
+const newRowCategoryOpen = ref(false)
+const newRowCategoryRef = ref(null)
+const newRowCategoryTriggerRef = ref(null)
+const newRowDropdownStyle = ref({})
+
+function updateDropdownPosition() {
+  const el = newRowCategoryTriggerRef.value
+  if (!el) return
+  const rect = el.getBoundingClientRect()
+  newRowDropdownStyle.value = {
+    position: 'fixed',
+    top: `${rect.bottom + 4}px`,
+    left: `${rect.left}px`,
+    width: `${rect.width}px`,
+    zIndex: 9999,
+  }
+}
+
+function toggleNewRowCategory() {
+  newRowCategoryOpen.value = !newRowCategoryOpen.value
+  if (newRowCategoryOpen.value) updateDropdownPosition()
+}
+function toggleNewRowCategoryValue(name) {
+  if (newRow.categories.includes(name)) {
+    newRow.categories = newRow.categories.filter((c) => c !== name)
+  } else {
+    newRow.categories = [...newRow.categories, name]
+  }
+}
+function handleNewRowOutside(event) {
+  if (!newRowCategoryRef.value) return
+  if (!newRowCategoryRef.value.contains(event.target)) newRowCategoryOpen.value = false
+}
+onMounted(() => document.addEventListener('mousedown', handleNewRowOutside))
+onBeforeUnmount(() => document.removeEventListener('mousedown', handleNewRowOutside))
 
 function startNewRow() {
   Object.assign(newRow, {
@@ -182,10 +223,11 @@ function startNewRow() {
     amount: '',
     payment_date: dayjs().format('YYYY-MM-DD'),
     status: 'pending',
-    category: '',
+    categories: [],
     responsible_user_id: '',
     customValues: {},
   })
+  newRowCategoryOpen.value = false
   showNewRow.value = true
   nextTick(() => {
     document.getElementById('new-row-description')?.focus()
@@ -199,7 +241,8 @@ async function saveNewRow() {
     amount: Number(newRow.amount),
     payment_date: newRow.payment_date || `${store.month}-01`,
     status: newRow.status || 'pending',
-    category: newRow.category || '',
+    categories: [...newRow.categories],
+    category: newRow.categories[0] || '',
     responsible_user_id: newRow.responsible_user_id || null,
     type: 'extraordinary',
     installments: 1,
@@ -296,6 +339,42 @@ function categoryBadgeStyle(categoryName) {
   }
 }
 
+function multiCategoryLabel(count) {
+  return `${count} categorías`
+}
+
+// ── Tooltip flotante para multi-categoría ────────────────────────────────────
+const tooltip = reactive({
+  visible: false,
+  categories: [],
+  style: {},
+})
+let tooltipHideTimer = null
+
+function showCategoryTooltip(event, categories) {
+  clearTimeout(tooltipHideTimer)
+  const rect = event.currentTarget.getBoundingClientRect()
+  tooltip.categories = categories
+  tooltip.style = {
+    position: 'fixed',
+    left: `${rect.left + rect.width / 2}px`,
+    bottom: `${window.innerHeight - rect.top + 6}px`,
+    transform: 'translateX(-50%)',
+    zIndex: 9999,
+  }
+  tooltip.visible = true
+}
+
+function hideCategoryTooltip() {
+  tooltipHideTimer = setTimeout(() => {
+    tooltip.visible = false
+  }, 80)
+}
+
+function cancelHideTooltip() {
+  clearTimeout(tooltipHideTimer)
+}
+
 function toggleSort(field) {
   if (sortBy.value === field) {
     sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
@@ -374,7 +453,21 @@ function sortLabel(field) {
               <span :class="['badge', statusInfo(item.status).class]">{{ statusInfo(item.status).label }}</span>
             </td>
             <td class="col-categoria">
-              <span v-if="item.category" class="category-badge" :style="categoryBadgeStyle(item.category)">{{ item.category }}</span>
+              <template v-if="getExpenseCategories(item).length === 1">
+                <span
+                  class="category-badge"
+                  :style="categoryBadgeStyle(getExpenseCategories(item)[0])"
+                >{{ getExpenseCategories(item)[0] }}</span>
+              </template>
+              <template v-else-if="getExpenseCategories(item).length > 1">
+                <span
+                  class="category-badge category-badge--multi"
+                  @mouseenter="showCategoryTooltip($event, getExpenseCategories(item))"
+                  @mouseleave="hideCategoryTooltip"
+                >
+                  {{ multiCategoryLabel(getExpenseCategories(item).length) }}
+                </span>
+              </template>
               <span v-else class="muted-text">Sin categoría</span>
             </td>
             <td class="col-responsable">
@@ -442,10 +535,43 @@ function sortLabel(field) {
               </select>
             </td>
             <td class="col-categoria">
-              <select v-model="newRow.category" class="cell-input">
-                <option value="">Sin categoría</option>
-                <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
-              </select>
+              <div ref="newRowCategoryRef" class="cell-multi">
+                <button
+                  ref="newRowCategoryTriggerRef"
+                  type="button"
+                  class="cell-multi-trigger cell-input"
+                  @click.stop="toggleNewRowCategory"
+                >
+                  <span v-if="newRow.categories.length === 0" class="cell-placeholder">Sin categoría</span>
+                  <span v-else-if="newRow.categories.length === 1" class="cell-single">{{ newRow.categories[0] }}</span>
+                  <span v-else class="cell-single">{{ multiCategoryLabel(newRow.categories.length) }}</span>
+                </button>
+                <Teleport to="body">
+                  <Transition name="dropdown">
+                    <div v-if="newRowCategoryOpen" class="cell-multi-menu" :style="newRowDropdownStyle">
+                      <p v-if="!categoryOptions.length" class="cell-multi-empty">
+                        Crea una categoría en Configuración.
+                      </p>
+                      <label
+                        v-for="cat in categoryOptions"
+                        :key="cat.id || cat.name"
+                        class="cell-multi-option"
+                      >
+                        <input
+                          type="checkbox"
+                          :checked="newRow.categories.includes(cat.name || cat)"
+                          @change="toggleNewRowCategoryValue(cat.name || cat)"
+                        />
+                        <span
+                          class="cell-dot"
+                          :style="{ backgroundColor: cat.color || '#6b7280' }"
+                        />
+                        <span>{{ cat.name || cat }}</span>
+                      </label>
+                    </div>
+                  </Transition>
+                </Teleport>
+              </div>
             </td>
             <td class="col-responsable">
               <select v-model="newRow.responsible_user_id" class="cell-input">
@@ -548,11 +674,31 @@ function sortLabel(field) {
     <ExpenseDrawer
       :open="showDrawer"
       :model-value="editingExpense"
-      :categories="categories"
+      :categories="categoryOptions"
       :members="members"
       @save="saveExpense"
       @close="showDrawer = false"
     />
+
+    <!-- Tooltip flotante multi-categoría -->
+    <Teleport to="body">
+      <Transition name="tooltip-fade">
+        <div
+          v-if="tooltip.visible"
+          class="category-float-tooltip"
+          :style="tooltip.style"
+          @mouseenter="cancelHideTooltip"
+          @mouseleave="hideCategoryTooltip"
+        >
+          <span
+            v-for="name in tooltip.categories"
+            :key="name"
+            class="tooltip-chip"
+            :style="categoryBadgeStyle(name)"
+          >{{ name }}</span>
+        </div>
+      </Transition>
+    </Teleport>
   </section>
 </template>
 
@@ -744,6 +890,98 @@ function sortLabel(field) {
   font-size: 0.78rem;
   font-weight: 600;
 }
+
+.category-badge--multi {
+  background: rgba(120, 120, 130, 0.15);
+  color: var(--color-on-surface-variant);
+  border-color: rgba(120, 120, 130, 0.3);
+  cursor: default;
+}
+
+/* Tooltip flotante renderizado vía Teleport en <body> */
+.category-float-tooltip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 8px 10px;
+  background: var(--color-surface-bright);
+  border: 1px solid var(--color-outline-variant);
+  border-radius: 12px;
+  box-shadow: var(--shadow-float);
+  max-width: 280px;
+  pointer-events: none;
+}
+
+.tooltip-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tooltip-fade-enter-active,
+.tooltip-fade-leave-active { transition: opacity 0.12s ease; }
+.tooltip-fade-enter-from,
+.tooltip-fade-leave-to { opacity: 0; }
+
+/* Multi-select en fila nueva */
+.cell-multi { position: relative; }
+.cell-multi-trigger {
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+.cell-placeholder { color: var(--color-on-surface-muted); }
+.cell-single { color: var(--color-on-surface); }
+.cell-multi-menu {
+  min-width: 200px;
+  background: var(--color-surface-bright);
+  border: 1px solid var(--color-outline-variant);
+  border-radius: 10px;
+  box-shadow: var(--shadow-float);
+  padding: 4px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.cell-multi-empty {
+  margin: 0;
+  padding: 8px 10px;
+  font-size: 0.78rem;
+  color: var(--color-on-surface-muted);
+}
+.cell-multi-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--color-on-surface);
+}
+.cell-multi-option:hover { background: var(--color-surface-container-high); }
+.cell-multi-option input[type='checkbox'] {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--color-secondary);
+  margin: 0;
+}
+.cell-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dropdown-enter-active,
+.dropdown-leave-active { transition: opacity 0.15s ease, transform 0.15s ease; }
+.dropdown-enter-from,
+.dropdown-leave-to { opacity: 0; transform: translateY(-4px); }
 
 .responsible-label {
   font-family: var(--font-body);

@@ -1,11 +1,12 @@
 <script setup>
 import { ref, reactive, computed, watch, onMounted, onBeforeUnmount } from 'vue'
-import { listCategories, saveCategory, deleteCategory, countExpensesByCategory, reassignExpenses } from '../services/expenseService'
 import { listCollaborators, inviteCollaborator, removeCollaborator } from '../services/collaboratorService'
 import { listSpaceMembers, removeSpaceMember, cancelSpaceInvite, inviteToSpace, listWorkspaceUsers, listSpacePendingInvites } from '../services/spacesService'
 import { useSpaceStore } from '../store/useSpaceStore'
+import { useFinanceStore } from '../store/useFinanceStore'
 
 const spaceStore = useSpaceStore()
+const financeStore = useFinanceStore()
 const isSpaceContext = computed(() => !!spaceStore.currentSpaceId)
 const currentSpaceId = computed(() => spaceStore.currentSpaceId)
 const canEdit = computed(() => {
@@ -45,7 +46,8 @@ function getIconSvg(key) {
 }
 
 // ── Categories ──────────────────────────────────────────────────────────────
-const categories = ref([])
+// Fuente única de verdad: finance store (para que cambios se reflejen en Gastos).
+const categories = computed(() => financeStore.categories)
 const showCategoryForm = ref(false)
 const categoryForm = reactive({ id: null, name: '', color: '#3b5bdb', icon: 'shopping-bag' })
 const categoryError = ref('')
@@ -106,16 +108,12 @@ async function submitCategory() {
   categoryLoading.value = true
   categoryError.value = ''
   try {
-    const saved = await saveCategory({
+    await financeStore.upsertCategory({
       id: categoryForm.id || undefined,
       name,
       color: categoryForm.color,
       icon: categoryForm.icon,
-      spaceId: currentSpaceId.value,
     })
-    const idx = categories.value.findIndex((c) => c.id === saved.id)
-    if (idx >= 0) categories.value[idx] = saved
-    else categories.value.push(saved)
     showCategoryForm.value = false
   } catch (err) {
     categoryError.value = err.message || 'No se pudo guardar la categoria'
@@ -141,11 +139,7 @@ async function confirmDeleteCategory(cat) {
   deleteTarget.name = cat.name
   deleteReplacementId.value = '__none__'
   deleteLoading.value = false
-  try {
-    deleteExpenseCount.value = await countExpensesByCategory(cat.id)
-  } catch {
-    deleteExpenseCount.value = 0
-  }
+  deleteExpenseCount.value = await financeStore.countCategoryExpenses(cat.id)
   showDeleteDialog.value = true
 }
 
@@ -156,12 +150,9 @@ function cancelDelete() {
 async function executeDelete() {
   deleteLoading.value = true
   try {
-    if (deleteExpenseCount.value > 0) {
-      const replacement = deleteReplacementId.value === '__none__' ? null : deleteReplacementId.value
-      await reassignExpenses(deleteTarget.id, replacement)
-    }
-    await deleteCategory(deleteTarget.id, currentSpaceId.value)
-    categories.value = categories.value.filter((c) => c.id !== deleteTarget.id)
+    const replacementId =
+      deleteReplacementId.value === '__none__' ? null : deleteReplacementId.value
+    await financeStore.removeCategory(deleteTarget.id, { replacementId })
     showDeleteDialog.value = false
     showToast(`Categoria "${deleteTarget.name}" eliminada`)
   } catch (err) {
@@ -300,8 +291,8 @@ const teamMembers = computed(() => {
 // ── Bootstrap ───────────────────────────────────────────────────────────────
 async function loadData(spaceId) {
   const isSpace = !!spaceId
-  const [cats, collabs, team, pending] = await Promise.all([
-    listCategories(spaceId).catch(() => []),
+  const [, collabs, team, pending] = await Promise.all([
+    financeStore.refreshCategories(),
     isSpace
       ? listSpaceMembers(spaceId).catch(() => [])
       : listCollaborators().catch(() => []),
@@ -312,7 +303,6 @@ async function loadData(spaceId) {
       ? listSpacePendingInvites(spaceId).catch(() => [])
       : Promise.resolve([]),
   ])
-  categories.value = cats
   collaborators.value = collabs
   workspaceUsers.value = [...team, ...pending]
 }

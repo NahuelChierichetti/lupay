@@ -33,6 +33,9 @@ const form = reactive({
   status: 'active',
   priority: 'medium',
   icon: 'tabler:trophy',
+  currency: 'ARS',
+  savings_frequency: '',
+  savings_target: '',
 })
 
 watch(
@@ -49,6 +52,9 @@ watch(
       status: value.status || 'active',
       priority: value.priority || 'medium',
       icon: value.icon || 'tabler:trophy',
+      currency: value.currency || 'ARS',
+      savings_frequency: value.savings_frequency || '',
+      savings_target: value.savings_target || '',
     })
   },
   { immediate: true },
@@ -59,6 +65,8 @@ function submit() {
     ...form,
     target_amount: Number(form.target_amount),
     saved_amount: Number(form.saved_amount || 0),
+    savings_target: form.savings_target ? Number(form.savings_target) : null,
+    savings_frequency: form.savings_frequency || null,
   })
 }
 </script>
@@ -101,6 +109,26 @@ function submit() {
             </div>
           </div>
 
+          <div class="goal-form-field">
+            <label class="label-sm">MONEDA</label>
+            <div class="goal-currency-toggle">
+              <button
+                type="button"
+                :class="['goal-currency-btn', { active: form.currency === 'ARS' }]"
+                @click="form.currency = 'ARS'"
+              >
+                <Icon icon="tabler:currency-peso" :width="16" /> Pesos (ARS)
+              </button>
+              <button
+                type="button"
+                :class="['goal-currency-btn', { active: form.currency === 'USD' }]"
+                @click="form.currency = 'USD'"
+              >
+                <Icon icon="tabler:currency-dollar" :width="16" /> Dólares (USD)
+              </button>
+            </div>
+          </div>
+
           <div class="goal-form-row">
             <div class="goal-form-field">
               <label class="label-sm">FECHA OBJETIVO</label>
@@ -114,6 +142,33 @@ function submit() {
                 <option value="low">Baja</option>
               </select>
             </div>
+          </div>
+
+          <!-- Savings streak frequency -->
+          <div class="goal-form-field">
+            <label class="label-sm">FRECUENCIA DE AHORRO</label>
+            <select v-model="form.savings_frequency">
+              <option value="">Sin racha de ahorro</option>
+              <option value="daily">Diaria</option>
+              <option value="weekly">Semanal</option>
+              <option value="monthly">Mensual</option>
+            </select>
+          </div>
+
+          <div v-if="form.savings_frequency" class="goal-form-field">
+            <label class="label-sm">META DE AHORRO POR PERÍODO</label>
+            <input
+              v-model.number="form.savings_target"
+              type="number"
+              min="0"
+              step="0.01"
+              :placeholder="form.currency === 'USD' ? 'Ej: 50' : 'Ej: 10.000'"
+            />
+            <p class="goal-form-hint body-sm">
+              Cuánto querés ahorrar cada
+              {{ form.savings_frequency === 'daily' ? 'día' : form.savings_frequency === 'weekly' ? 'semana' : 'mes' }}.
+              Al tildarlo generás una racha 🔥
+            </p>
           </div>
 
           <div class="goal-form-field">

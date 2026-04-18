@@ -218,6 +218,15 @@ export const useFinanceStore = defineStore('finance', {
         this.error = err.message || 'No se pudo eliminar el objetivo'
       }
     },
+    async toggleStreakRecord(goalId, periodKey) {
+      const goal = this.goals.find((g) => g.id === goalId)
+      if (!goal) return
+      const records = [...(goal.streak_records || [])]
+      const idx = records.indexOf(periodKey)
+      if (idx >= 0) records.splice(idx, 1)
+      else records.push(periodKey)
+      await this.upsertGoal({ ...goal, streak_records: records })
+    },
     evaluateScenario(amount) {
       return scenarioImpact(this.dashboard.totalSpent, amount, this.monthlyBudget)
     },

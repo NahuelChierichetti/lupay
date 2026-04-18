@@ -39,9 +39,24 @@ function getPeriodLabel(freq, offsetFromNow) {
 function getPeriods(goal) {
   const freq = goal.savings_frequency
   const records = new Set(goal.streak_records || [])
-  const count = freq === 'daily' ? 14 : freq === 'weekly' ? 8 : 6
+  const maxCount = freq === 'daily' ? 14 : freq === 'weekly' ? 8 : 6
+  const createdAt = goal.created_at ? dayjs(goal.created_at) : null
+
   const periods = []
-  for (let i = count - 1; i >= 0; i--) {
+  for (let i = maxCount - 1; i >= 0; i--) {
+    if (createdAt) {
+      let periodStart
+      if (freq === 'daily') {
+        periodStart = dayjs().subtract(i, 'day').startOf('day')
+        if (periodStart.isBefore(createdAt.startOf('day'))) continue
+      } else if (freq === 'weekly') {
+        periodStart = dayjs().subtract(i, 'week').startOf('week')
+        if (periodStart.isBefore(createdAt.startOf('week'))) continue
+      } else {
+        periodStart = dayjs().subtract(i, 'month').startOf('month')
+        if (periodStart.isBefore(createdAt.startOf('month'))) continue
+      }
+    }
     const key = getPeriodKey(freq, i)
     periods.push({
       key,

@@ -2,9 +2,9 @@
 import { computed, ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import GoalForm from '../components/forms/GoalForm.vue'
-import GoalPatrimonyChart from '../components/goals/GoalPatrimonyChart.vue'
+import GoalStreakSection from '../components/goals/GoalStreakSection.vue'
 import { useFinanceStore } from '../store/useFinanceStore'
-import { currency } from '../utils/finance'
+import { goalCurrency } from '../utils/finance'
 import dayjs from 'dayjs'
 
 const store = useFinanceStore()
@@ -34,39 +34,14 @@ const completedGoals = computed(() =>
   goals.value.filter((g) => g.status === 'completed'),
 )
 
-// ── Aggregate stats ──
-const totalSaved = computed(() =>
-  goals.value.reduce((s, g) => s + Number(g.saved_amount || 0), 0),
-)
-
-const totalTarget = computed(() =>
-  goals.value.reduce((s, g) => s + Number(g.target_amount || 0), 0),
-)
-
-const quarterTarget = computed(() => {
-  const now = dayjs()
-  const quarterEnd = now.endOf('quarter')
-  const quarterGoals = goals.value.filter(
-    (g) => g.status === 'active' && dayjs(g.target_date).isBefore(quarterEnd),
-  )
-  const remaining = quarterGoals.reduce(
-    (s, g) => s + Math.max(0, Number(g.target_amount || 0) - Number(g.saved_amount || 0)),
-    0,
-  )
-  return remaining
-})
-
 // ── Progress helper ──
 function progress(goal) {
   if (!goal.target_amount) return 0
   return Math.min(100, (Number(goal.saved_amount || 0) / Number(goal.target_amount)) * 100)
 }
 
-function formatTarget(amount) {
-  const n = Number(amount || 0)
-  if (n >= 1000) return `${(n / 1000).toFixed(n % 1000 === 0 ? 0 : 1)}k`
-  return String(n)
-}
+// ── Currency badge ──
+const currencyBadge = { ARS: '$', USD: 'US$' }
 
 // ── Priority labels ──
 const priorityLabels = { high: 'ALTA PRIORIDAD', medium: 'PRIORIDAD MEDIA', low: 'BAJA PRIORIDAD' }
@@ -82,49 +57,6 @@ function achievementTier(index) {
   return 1
 }
 
-// ── Patrimony chart data ──
-const patrimonyCategories = computed(() => {
-  const months = []
-  for (let i = 5; i >= 0; i--) {
-    months.push(dayjs().subtract(i, 'month').format('MMM').toUpperCase())
-  }
-  return months
-})
-
-const patrimonyRealData = computed(() => {
-  const total = totalSaved.value
-  const points = []
-  for (let i = 5; i >= 0; i--) {
-    const factor = (6 - i) / 6
-    points.push(Math.round(total * factor * (0.7 + Math.random() * 0.3)))
-  }
-  if (points.length) points[points.length - 1] = total
-  return points
-})
-
-const patrimonyProjectedData = computed(() => {
-  const total = totalSaved.value
-  const target = totalTarget.value
-  const points = patrimonyRealData.value.map(() => null)
-  if (points.length) {
-    points[points.length - 1] = total
-    const step = (target - total) / 3
-    for (let i = 1; i <= 3; i++) {
-      points.push(Math.round(total + step * i))
-    }
-  }
-  return points
-})
-
-const projectedCategories = computed(() => {
-  const base = patrimonyCategories.value
-  const future = []
-  for (let i = 1; i <= 3; i++) {
-    future.push(dayjs().add(i, 'month').format('MMM').toUpperCase())
-  }
-  return [...base, ...future]
-})
-
 // ── CRUD ──
 function createGoal() {
   editing.value = {
@@ -136,6 +68,10 @@ function createGoal() {
     status: 'active',
     priority: 'medium',
     icon: 'tabler:trophy',
+    currency: 'ARS',
+    savings_frequency: '',
+    savings_target: '',
+    streak_records: [],
   }
   showForm.value = true
 }
@@ -160,6 +96,10 @@ async function deleteGoal(id) {
 function toggleMenu(id) {
   openMenuId.value = openMenuId.value === id ? null : id
 }
+
+async function handleTogglePeriod({ goalId, periodKey }) {
+  await store.toggleStreakRecord(goalId, periodKey)
+}
 </script>
 
 <template>
@@ -172,9 +112,6 @@ function toggleMenu(id) {
         </h2>
         <p class="body-md goals-header__sub">
           Cada ahorro es una pincelada en tu lienzo de libertad.
-          <template v-if="quarterTarget > 0">
-            Estás a <strong class="text-secondary">{{ currency(quarterTarget) }}</strong> de completar tu meta del trimestre.
-          </template>
         </p>
       </div>
     </div>
@@ -191,10 +128,28 @@ function toggleMenu(id) {
             <span :class="['badge', priorityClasses[heroGoal.priority || 'medium']]">
               {{ priorityLabels[heroGoal.priority || 'medium'] }}
             </span>
+            <span v-if="heroGoal.currency" class="badge badge-tertiary">
+              {{ currencyBadge[heroGoal.currency] || heroGoal.currency }}
+            </span>
           </div>
-          <div class="goals-hero-card__pct">
-            <span class="display-sm">{{ Math.round(progress(heroGoal)) }}%</span>
-            <span class="label-sm">COMPLETADO</span>
+          <div class="goals-hero-card__actions">
+            <div class="goals-hero-card__pct">
+              <span class="display-sm">{{ Math.round(progress(heroGoal)) }}%</span>
+              <span class="label-sm">COMPLETADO</span>
+            </div>
+            <button class="btn-icon goals-card__menu" @click.stop="toggleMenu(heroGoal.id)">
+              <Icon icon="tabler:dots-vertical" :width="18" />
+            </button>
+            <Transition name="fade">
+              <div v-if="openMenuId === heroGoal.id" class="goals-card__dropdown">
+                <button class="goals-card__dropdown-item" @click="editGoal(heroGoal)">
+                  <Icon icon="tabler:edit" :width="16" /> Editar
+                </button>
+                <button class="goals-card__dropdown-item goals-card__dropdown-item--danger" @click="deleteGoal(heroGoal.id)">
+                  <Icon icon="tabler:trash" :width="16" /> Eliminar
+                </button>
+              </div>
+            </Transition>
           </div>
         </div>
 
@@ -206,11 +161,11 @@ function toggleMenu(id) {
         <div class="goals-hero-card__amounts">
           <div>
             <span class="label-sm">AHORRADO</span>
-            <h4 class="display-sm">{{ currency(heroGoal.saved_amount) }}</h4>
+            <h4 class="display-sm">{{ goalCurrency(heroGoal.saved_amount, heroGoal.currency) }}</h4>
           </div>
           <div class="goals-hero-card__target">
             <span class="label-sm">META</span>
-            <h4 class="display-sm">{{ currency(heroGoal.target_amount) }}</h4>
+            <h4 class="display-sm">{{ goalCurrency(heroGoal.target_amount, heroGoal.currency) }}</h4>
           </div>
         </div>
 
@@ -243,9 +198,14 @@ function toggleMenu(id) {
           <span class="goals-card__icon">
             <Icon :icon="goal.icon || 'tabler:trophy'" :width="22" />
           </span>
-          <button class="btn-icon goals-card__menu" @click.stop="toggleMenu(goal.id)">
-            <Icon icon="tabler:dots-vertical" :width="18" />
-          </button>
+          <div style="display: flex; align-items: center; gap: 0.4rem;">
+            <span v-if="goal.currency" class="badge badge-tertiary" style="font-size: 0.65rem; padding: 0.2rem 0.5rem;">
+              {{ currencyBadge[goal.currency] || goal.currency }}
+            </span>
+            <button class="btn-icon goals-card__menu" @click.stop="toggleMenu(goal.id)">
+              <Icon icon="tabler:dots-vertical" :width="18" />
+            </button>
+          </div>
           <!-- Dropdown menu -->
           <Transition name="fade">
             <div v-if="openMenuId === goal.id" class="goals-card__dropdown">
@@ -263,12 +223,18 @@ function toggleMenu(id) {
         <p v-if="goal.description" class="body-sm goals-card__desc">{{ goal.description }}</p>
 
         <div class="goals-card__footer">
-          <span class="display-sm goals-card__amount">{{ currency(goal.saved_amount) }}</span>
-          <span class="label-sm text-muted">Meta: {{ currency(goal.target_amount) }}</span>
+          <span class="display-sm goals-card__amount">{{ goalCurrency(goal.saved_amount, goal.currency) }}</span>
+          <span class="label-sm text-muted">Meta: {{ goalCurrency(goal.target_amount, goal.currency) }}</span>
         </div>
         <progress :value="progress(goal)" max="100"></progress>
       </article>
     </div>
+
+    <!-- Savings Streak Section -->
+    <GoalStreakSection
+      :goals="goals"
+      @toggle-period="handleTogglePeriod"
+    />
 
     <!-- Achievements Section -->
     <div v-if="completedGoals.length" class="goals-achievements">
@@ -301,15 +267,6 @@ function toggleMenu(id) {
         </div>
       </div>
     </div>
-
-    <!-- Patrimony Evolution Chart -->
-    <GoalPatrimonyChart
-      v-if="goals.length"
-      :real-data="patrimonyRealData"
-      :projected-data="patrimonyProjectedData"
-      :categories="projectedCategories"
-      :current-total="totalSaved"
-    />
 
     <!-- Goal Form Drawer -->
     <GoalForm

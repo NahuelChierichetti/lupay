@@ -10,6 +10,15 @@ export function currency(amount) {
   )
 }
 
+export function goalCurrency(amount, currencyCode = 'ARS') {
+  if (currencyCode === 'USD') {
+    return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(
+      Number(amount || 0),
+    )
+  }
+  return currency(amount)
+}
+
 export function withInstallments(expense) {
   const installments = Number(expense.installments || 1)
   if (installments <= 1) {

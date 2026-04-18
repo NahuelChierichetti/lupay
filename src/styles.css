@@ -1326,6 +1326,21 @@ progress::-moz-progress-bar {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.goals-hero-card__meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.goals-hero-card__badges {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
 }
 
 .goals-hero-card__pct {
@@ -1760,6 +1775,7 @@ progress::-moz-progress-bar {
   flex-direction: column;
   gap: 1rem;
   transition: background 0.2s ease;
+  min-width: 0;
 }
 
 .goals-streak-card:hover {
@@ -1769,7 +1785,7 @@ progress::-moz-progress-bar {
 .goals-streak-card__top {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 1rem;
 }
 
@@ -1831,6 +1847,7 @@ progress::-moz-progress-bar {
   overflow-x: auto;
   padding-bottom: 0.25rem;
   scrollbar-width: none;
+  min-width: 0;
 }
 
 .goals-streak-periods::-webkit-scrollbar {
@@ -1911,5 +1928,56 @@ progress::-moz-progress-bar {
 
   .goals-streak-list {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 767px) {
+  /* Streak card top: info ocupa fila completa, números debajo a la derecha */
+  .goals-streak-card__top {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .goals-streak-card__info {
+    flex: 1 1 100%;
+  }
+
+  .goals-streak-card__streak {
+    margin-left: auto;
+  }
+
+  /* Hero card top: icon arriba, badges abajo */
+  .goals-hero-card__meta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+  }
+
+  /* "Crear nueva meta" va primero en mobile */
+  .goals-create-card {
+    order: -1;
+    flex-direction: row;
+    min-height: unset;
+    padding: 0.875rem 1.25rem;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 0.75rem;
+    border-radius: 1rem;
+  }
+
+  .goals-create-card__icon {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+  }
+
+  .goals-create-card .body-sm {
+    display: none;
+  }
+
+  .goals-create-card h3 {
+    font-size: 0.9375rem;
+    margin: 0;
+    text-align: left;
   }
 }

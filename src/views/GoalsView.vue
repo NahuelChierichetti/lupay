@@ -121,16 +121,18 @@ async function handleTogglePeriod({ goalId, periodKey }) {
       <!-- Hero Goal Card -->
       <article v-if="heroGoal" class="goals-hero-card">
         <div class="goals-hero-card__top">
-          <div class="flex items-center row" style="align-items: center; gap: 0.5rem;">
+          <div class="goals-hero-card__meta">
             <span class="goals-card__icon">
               <Icon :icon="heroGoal.icon || 'tabler:trophy'" :width="22" />
             </span>
-            <span :class="['badge', priorityClasses[heroGoal.priority || 'medium']]">
-              {{ priorityLabels[heroGoal.priority || 'medium'] }}
-            </span>
-            <span v-if="heroGoal.currency" class="badge badge-tertiary">
-              {{ currencyBadge[heroGoal.currency] || heroGoal.currency }}
-            </span>
+            <div class="goals-hero-card__badges">
+              <span :class="['badge', priorityClasses[heroGoal.priority || 'medium']]">
+                {{ priorityLabels[heroGoal.priority || 'medium'] }}
+              </span>
+              <span v-if="heroGoal.currency" class="badge badge-tertiary">
+                {{ currencyBadge[heroGoal.currency] || heroGoal.currency }}
+              </span>
+            </div>
           </div>
           <div class="goals-hero-card__actions">
             <div class="goals-hero-card__pct">

@@ -9,7 +9,7 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['logo-lupay.png'],
+      includeAssets: ['logo-lupay-green.png'],
       manifest: {
         name: 'LUPAY - Gestor Financiero',
         short_name: 'LUPAY',
@@ -22,17 +22,17 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: 'logo-lupay.png',
+            src: 'logo-lupay-green.png',
             sizes: '192x192',
             type: 'image/png',
           },
           {
-            src: 'logo-lupay.png',
+            src: 'logo-lupay-green.png',
             sizes: '512x512',
             type: 'image/png',
           },
           {
-            src: 'logo-lupay.png',
+            src: 'logo-lupay-green.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable',

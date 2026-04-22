@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import ExpensesView from '../views/ExpensesView.vue'
 import PlanningView from '../views/PlanningView.vue'
 import GoalsView from '../views/GoalsView.vue'
+import CuotasView from '../views/CuotasView.vue'
 import AuthView from '../views/AuthView.vue'
 import ProfileView from '../views/ProfileView.vue'
 import ConfiguracionView from '../views/ConfiguracionView.vue'
@@ -28,6 +29,7 @@ const router = createRouter({
         { path: 'gastos', name: 'gastos', component: ExpensesView },
         { path: 'planificacion', name: 'planificacion', component: PlanningView },
         { path: 'objetivos', name: 'objetivos', component: GoalsView },
+        { path: 'cuotas', name: 'cuotas', component: CuotasView },
         { path: 'configuracion', name: 'configuracion', component: ConfiguracionView },
         { path: 'perfil', name: 'perfil', component: ProfileView },
         { path: 'espacios', name: 'espacios', component: SpacesView },

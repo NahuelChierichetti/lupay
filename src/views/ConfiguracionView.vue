@@ -821,7 +821,7 @@ watch(
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 8px 12px;
+  padding: 8px 12px !important;
   background: none;
   border: none;
   border-radius: 0.5rem;

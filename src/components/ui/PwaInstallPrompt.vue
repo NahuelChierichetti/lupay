@@ -2,23 +2,23 @@
   <Transition name="slide-up">
     <div
       v-if="showPrompt"
-      class="fixed bottom-20 left-4 right-4 z-50 bg-white rounded-2xl shadow-xl border border-gray-100 p-4 flex items-center gap-3"
+      class="fixed bottom-20 left-4 right-4 z-50 bg-surface rounded-2xl shadow-xl border border-surface-border p-4 flex items-center gap-3"
     >
-      <img src="/logo-lupay.png" alt="LUPAY" class="w-12 h-12 rounded-xl flex-shrink-0" />
+      <img src="./../../utils/logo-lupay-green.png" alt="LUPAY" class="w-12 h-12 rounded-xl flex-shrink-0" />
       <div class="flex-1 min-w-0">
-        <p class="font-semibold text-gray-900 text-sm">Instalar LUPAY</p>
-        <p class="text-xs text-gray-500 truncate">Agregá la app a tu pantalla de inicio</p>
+        <p class="font-semibold text-on-surface text-sm">Instalar LUPAY</p>
+        <p class="text-xs text-on-surface truncate">Agregá la app a tu pantalla de inicio</p>
       </div>
       <div class="flex gap-2 flex-shrink-0">
         <button
           @click="dismiss"
-          class="text-xs text-gray-400 px-2 py-1 rounded-lg hover:bg-gray-100"
+          class="text-xs text-on-surface px-2 py-1 rounded-lg hover:bg-surface-container"
         >
           No
         </button>
         <button
           @click="install"
-          class="text-xs font-semibold text-white bg-blue-900 px-3 py-1 rounded-lg hover:bg-blue-800"
+          class="text-xs font-semibold text-[#0e1a6e] bg-[#bac3ff] px-3 py-1 rounded-lg hover:bg-bg-[#bac3ff]"
         >
           Instalar
         </button>

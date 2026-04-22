@@ -178,10 +178,11 @@ async function logout() {
           <div class="drawer-header">
             <div class="sidebar-logo" style="margin-bottom:0">
               <div class="logo-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <!-- <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
                   <polyline points="17 6 23 6 23 12"/>
-                </svg>
+                </svg> -->
+                <img src="/src/utils/logo-lupay.png" alt="LUPAY" width="20" height="20" />
               </div>
               <div class="logo-text-block">
                 <span class="logo-text italic">LUPAY</span>

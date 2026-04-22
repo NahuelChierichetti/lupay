@@ -20,6 +20,7 @@ const navItems = [
   { to: '/gastos',        name: 'gastos',        label: 'Gastos',        icon: 'tabler:receipt-dollar' },
   { to: '/planificacion', name: 'planificacion',  label: 'Estadísticas',  icon: 'tabler:chart-bar' },
   { to: '/objetivos',     name: 'objetivos',      label: 'Objetivos',     icon: 'tabler:target' },
+  { to: '/cuotas',        name: 'cuotas',         label: 'Cuotas',        icon: 'tabler:credit-card' },
   { to: '/configuracion', name: 'configuracion',  label: 'Configuración', icon: 'tabler:settings' },
 ]
 
@@ -733,5 +734,11 @@ async function logout() {
 .content {
   padding: 2rem;
   flex: 1;
+}
+
+@media screen and (max-width: 768px) {
+  .content {
+    padding: 2rem 1rem;
+  }
 }
 </style>

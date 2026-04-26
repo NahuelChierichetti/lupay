@@ -4,9 +4,13 @@ import { listCollaborators, inviteCollaborator, removeCollaborator } from '../se
 import { listSpaceMembers, removeSpaceMember, cancelSpaceInvite, inviteToSpace, listWorkspaceUsers, listSpacePendingInvites } from '../services/spacesService'
 import { useSpaceStore } from '../store/useSpaceStore'
 import { useFinanceStore } from '../store/useFinanceStore'
+import { useWalletStore } from '../store/useWalletStore'
+import { currency } from '../utils/finance'
+import dayjs from 'dayjs'
 
 const spaceStore = useSpaceStore()
 const financeStore = useFinanceStore()
+const walletStore = useWalletStore()
 const isSpaceContext = computed(() => !!spaceStore.currentSpaceId)
 const currentSpaceId = computed(() => spaceStore.currentSpaceId)
 const canEdit = computed(() => {
@@ -18,6 +22,95 @@ const canEdit = computed(() => {
 
 // ── Tabs ────────────────────────────────────────────────────────────────────
 const activeTab = ref('categories')
+
+// ── Wallet ───────────────────────────────────────────────────────────────────
+const showIncomeForm = ref(false)
+const incomeLoading = ref(false)
+const incomeError = ref('')
+const incomeForm = reactive({
+  id: null,
+  description: '',
+  amount: '',
+  expected_day: 1,
+  status: 'pending',
+  recurrence: 'monthly',
+  month: dayjs().format('YYYY-MM'),
+})
+
+const totalExpensesThisMonth = computed(() => financeStore.dashboard?.totalSpent || 0)
+const walletHealth = computed(() => walletStore.financialHealth(totalExpensesThisMonth.value))
+
+const incomePercent = computed(() => {
+  const total = walletStore.totalExpected
+  if (!total) return 0
+  return Math.min(100, Math.round((totalExpensesThisMonth.value / total) * 100))
+})
+
+function openNewIncome() {
+  Object.assign(incomeForm, {
+    id: null,
+    description: '',
+    amount: '',
+    expected_day: 1,
+    status: 'pending',
+    recurrence: 'monthly',
+    month: dayjs().format('YYYY-MM'),
+  })
+  incomeError.value = ''
+  showIncomeForm.value = true
+}
+
+function editIncome(income) {
+  Object.assign(incomeForm, {
+    id: income.id,
+    description: income.description,
+    amount: income.amount,
+    expected_day: income.expected_day || 1,
+    status: income.status || 'pending',
+    recurrence: income.recurrence || 'monthly',
+    month: income.month || dayjs().format('YYYY-MM'),
+  })
+  incomeError.value = ''
+  showIncomeForm.value = true
+}
+
+function cancelIncome() {
+  showIncomeForm.value = false
+}
+
+async function submitIncome() {
+  const desc = incomeForm.description.trim()
+  if (!desc) { incomeError.value = 'El detalle es requerido'; return }
+  if (!incomeForm.amount || Number(incomeForm.amount) <= 0) { incomeError.value = 'Ingresá un monto válido'; return }
+  incomeLoading.value = true
+  incomeError.value = ''
+  try {
+    await walletStore.upsertIncome({ ...incomeForm })
+    showIncomeForm.value = false
+    showToast(incomeForm.id ? 'Ingreso actualizado' : 'Ingreso agregado')
+  } catch (err) {
+    incomeError.value = err.message || 'No se pudo guardar el ingreso'
+  } finally {
+    incomeLoading.value = false
+  }
+}
+
+async function deleteIncome(income) {
+  try {
+    await walletStore.deleteIncome(income.id)
+    showToast(`Ingreso "${income.description}" eliminado`)
+  } catch (err) {
+    showToast('No se pudo eliminar el ingreso')
+  }
+}
+
+async function toggleIncomeStatus(income) {
+  try {
+    await walletStore.toggleStatus(income)
+  } catch (err) {
+    showToast('No se pudo actualizar el estado')
+  }
+}
 
 // ── Icon registry ───────────────────────────────────────────────────────────
 const ICON_OPTIONS = [
@@ -305,6 +398,7 @@ async function loadData(spaceId) {
   ])
   collaborators.value = collabs
   workspaceUsers.value = [...team, ...pending]
+  walletStore.bootstrap(spaceId)
 }
 
 watch(
@@ -352,6 +446,14 @@ watch(
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         Equipo
+      </button>
+      <button
+        class="tab-btn"
+        :class="{ active: activeTab === 'wallet' }"
+        @click="activeTab = 'wallet'"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+        Billetera
       </button>
     </nav>
 
@@ -506,6 +608,212 @@ watch(
                 {{ deleteLoading ? 'Eliminando...' : 'Eliminar categoria' }}
               </button>
               <button class="btn-ghost" @click="cancelDelete">Cancelar</button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </div>
+
+    <!-- ═══ WALLET TAB ═══ -->
+    <div v-if="activeTab === 'wallet'" class="tab-content">
+      <div class="wallet-layout">
+
+        <!-- Left: incomes list -->
+        <div class="wallet-incomes-section">
+          <div class="section-header">
+            <h3 class="section-title">Fuentes de Ingreso</h3>
+            <p class="section-subtitle">Registrá tus ingresos mensuales para proyectar tu economía.</p>
+          </div>
+
+          <div class="income-list">
+            <div
+              v-for="income in walletStore.monthlyIncomes"
+              :key="income.id"
+              class="income-row"
+              :class="{ 'income-row--paid': income.status === 'paid' }"
+            >
+              <button
+                class="income-status-btn"
+                :class="income.status === 'paid' ? 'status-paid' : 'status-pending'"
+                :title="income.status === 'paid' ? 'Marcar como pendiente' : 'Marcar como cobrado'"
+                @click="toggleIncomeStatus(income)"
+              >
+                <svg v-if="income.status === 'paid'" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>
+              </button>
+
+              <div class="income-info">
+                <span class="income-description">{{ income.description }}</span>
+                <span class="income-meta">
+                  {{ income.recurrence === 'monthly' ? 'Mensual' : 'Único' }}
+                  · Esperado día {{ income.expected_day }}
+                </span>
+              </div>
+
+              <span class="income-amount" :class="income.status === 'paid' ? 'amount-paid' : 'amount-pending'">
+                {{ currency(income.amount) }}
+              </span>
+
+              <div class="income-actions">
+                <button class="icon-btn" title="Editar" @click="editIncome(income)">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </button>
+                <button class="icon-btn danger" title="Eliminar" @click="deleteIncome(income)">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <div v-if="walletStore.monthlyIncomes.length === 0 && !walletStore.loading" class="empty-state">
+              No hay ingresos registrados. Agregá tu primer fuente de ingreso.
+            </div>
+          </div>
+
+          <button v-if="canEdit" class="btn-add-income" @click="openNewIncome">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Agregar Ingreso
+          </button>
+        </div>
+
+        <!-- Right: financial summary -->
+        <div class="wallet-summary-card">
+          <!-- Health banner -->
+          <div class="health-banner" :class="`health-${walletHealth.status}`">
+            <span class="health-emoji">{{ walletHealth.emoji }}</span>
+            <p class="health-tip">{{ walletHealth.tip }}</p>
+          </div>
+
+          <!-- Stats -->
+          <div class="wallet-stats">
+            <div class="stat-row">
+              <span class="stat-label">Ingresos esperados</span>
+              <span class="stat-value">{{ currency(walletStore.totalExpected) }}</span>
+            </div>
+            <div class="stat-row stat-row--paid">
+              <span class="stat-label">
+                <span class="dot dot-paid"></span>
+                Cobrado
+              </span>
+              <span class="stat-value value-paid">{{ currency(walletStore.totalPaid) }}</span>
+            </div>
+            <div class="stat-row stat-row--pending">
+              <span class="stat-label">
+                <span class="dot dot-pending"></span>
+                Pendiente de cobro
+              </span>
+              <span class="stat-value value-pending">{{ currency(walletStore.totalPending) }}</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-row">
+              <span class="stat-label">Gastos del mes</span>
+              <span class="stat-value value-expenses">{{ currency(totalExpensesThisMonth) }}</span>
+            </div>
+          </div>
+
+          <!-- Progress bar: expenses vs income -->
+          <div v-if="walletStore.totalExpected > 0" class="income-progress-wrap">
+            <div class="income-progress-labels">
+              <span>Gastos / Ingresos</span>
+              <span>{{ incomePercent }}%</span>
+            </div>
+            <div class="income-progress-bar">
+              <div
+                class="income-progress-fill"
+                :class="{
+                  'fill-good': incomePercent < 70,
+                  'fill-warning': incomePercent >= 70 && incomePercent < 90,
+                  'fill-danger': incomePercent >= 90,
+                }"
+                :style="{ width: incomePercent + '%' }"
+              ></div>
+            </div>
+          </div>
+
+          <!-- Balance cards -->
+          <div class="balance-cards">
+            <div class="balance-card" :class="walletHealth.balanceNow >= 0 ? 'balance-positive' : 'balance-negative'">
+              <span class="balance-card-label">Saldo actual</span>
+              <span class="balance-card-amount">{{ currency(walletHealth.balanceNow) }}</span>
+              <span class="balance-card-hint">Cobrado menos gastos</span>
+            </div>
+            <div class="balance-card" :class="walletHealth.projectedBalance >= 0 ? 'balance-positive' : 'balance-negative'">
+              <span class="balance-card-label">Proyección final</span>
+              <span class="balance-card-amount">{{ currency(walletHealth.projectedBalance) }}</span>
+              <span class="balance-card-hint">Con todos los ingresos</span>
+            </div>
+          </div>
+
+          <p class="days-remaining-note" v-if="walletStore.totalExpected > 0">
+            Quedan <strong>{{ walletHealth.daysRemaining }}</strong> días en el mes
+          </p>
+        </div>
+      </div>
+
+      <!-- Income form modal -->
+      <Transition name="modal">
+        <div v-if="showIncomeForm && canEdit" class="modal-overlay" @click.self="cancelIncome">
+          <div class="modal-card">
+            <h3 class="modal-title">{{ incomeForm.id ? 'Editar ingreso' : 'Nuevo ingreso' }}</h3>
+
+            <div class="form-field">
+              <label>Detalle del ingreso</label>
+              <input
+                v-model="incomeForm.description"
+                placeholder="Ej: Sueldo empresa, Freelance cliente X"
+                @keydown.escape="cancelIncome"
+              />
+            </div>
+
+            <div class="form-field">
+              <label>Monto</label>
+              <input
+                v-model="incomeForm.amount"
+                type="number"
+                min="0"
+                placeholder="0"
+                @keydown.escape="cancelIncome"
+              />
+            </div>
+
+            <div class="form-row">
+              <div class="form-field">
+                <label>Recurrencia</label>
+                <select v-model="incomeForm.recurrence">
+                  <option value="monthly">Mensual</option>
+                  <option value="once">Una vez</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label>Día esperado</label>
+                <input
+                  v-model.number="incomeForm.expected_day"
+                  type="number"
+                  min="1"
+                  max="31"
+                  placeholder="1"
+                />
+              </div>
+            </div>
+
+            <div v-if="incomeForm.recurrence === 'once'" class="form-field">
+              <label>Mes</label>
+              <input v-model="incomeForm.month" type="month" />
+            </div>
+
+            <div class="form-field">
+              <label>Estado</label>
+              <select v-model="incomeForm.status">
+                <option value="pending">Pendiente de cobro</option>
+                <option value="paid">Cobrado</option>
+              </select>
+            </div>
+
+            <p v-if="incomeError" class="form-error">{{ incomeError }}</p>
+            <div class="form-actions">
+              <button class="btn-primary" :disabled="incomeLoading" @click="submitIncome">
+                {{ incomeLoading ? 'Guardando...' : 'Guardar' }}
+              </button>
+              <button class="btn-ghost" @click="cancelIncome">Cancelar</button>
             </div>
           </div>
         </div>
@@ -1379,6 +1687,331 @@ watch(
   color: var(--color-on-surface-muted);
   text-align: center;
   padding: 2rem 0;
+}
+
+/* ── Wallet Layout ───────────────────────────────────────────────────────── */
+.wallet-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+@media (min-width: 900px) {
+  .wallet-layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 1.5rem;
+    align-items: start;
+  }
+}
+
+.wallet-incomes-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* ── Income list ─────────────────────────────────────────────────────────── */
+.income-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.income-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  transition: background 0.15s;
+}
+
+.income-row:hover { background: var(--color-surface-container-high); }
+.income-row--paid { opacity: 0.8; }
+
+.income-status-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0px !important;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s, transform 0.15s;
+}
+
+.income-status-btn:hover { transform: scale(1.1); }
+
+.status-paid {
+  background: rgba(68, 221, 193, 0.15);
+  color: var(--color-secondary);
+}
+
+.status-pending {
+  background: var(--color-surface-container);
+  color: var(--color-on-surface-muted);
+}
+
+.income-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.income-description {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-on-surface);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.income-meta {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  color: var(--color-on-surface-muted);
+}
+
+.income-amount {
+  font-family: var(--font-display);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.amount-paid { color: var(--color-secondary); }
+.amount-pending { color: var(--color-on-surface-variant); }
+
+.income-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  flex-shrink: 0;
+}
+
+.income-row:hover .income-actions { opacity: 1; }
+
+/* ── Add income button ───────────────────────────────────────────────────── */
+.btn-add-income {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0.625rem 1.25rem;
+  background: var(--color-surface-container-high);
+  color: var(--color-on-surface-variant);
+  border: 1.5px dashed var(--color-outline-variant);
+  border-radius: 0.75rem;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+  align-self: flex-start;
+}
+
+.btn-add-income:hover {
+  background: var(--color-surface-bright);
+  color: var(--color-on-surface);
+  border-color: var(--color-on-surface-muted);
+}
+
+/* ── Wallet Summary Card ─────────────────────────────────────────────────── */
+.wallet-summary-card {
+  background: var(--color-surface-container-high);
+  border-radius: 1.25rem;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  box-shadow: var(--shadow-card);
+}
+
+/* ── Health Banner ───────────────────────────────────────────────────────── */
+.health-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border-radius: 0.875rem;
+  padding: 0.875rem 1rem;
+}
+
+.health-good    { background: rgba(68, 221, 193, 0.08); }
+.health-ok      { background: rgba(144, 202, 249, 0.08); }
+.health-warning { background: rgba(244, 197, 91, 0.08); }
+.health-danger  { background: rgba(255, 100, 100, 0.08); }
+.health-neutral { background: var(--color-surface-container); }
+
+.health-emoji {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  line-height: 1.5;
+}
+
+.health-tip {
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.health-good    .health-tip { color: var(--color-secondary); }
+.health-ok      .health-tip { color: #90caf9; }
+.health-warning .health-tip { color: #F4C55B; }
+.health-danger  .health-tip { color: var(--color-error); }
+.health-neutral .health-tip { color: var(--color-on-surface-muted); }
+
+/* ── Stats ───────────────────────────────────────────────────────────────── */
+.wallet-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.stat-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  color: var(--color-on-surface-muted);
+}
+
+.stat-value {
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-on-surface);
+}
+
+.value-paid     { color: var(--color-secondary); }
+.value-pending  { color: #F4C55B; }
+.value-expenses { color: var(--color-error); }
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dot-paid    { background: var(--color-secondary); }
+.dot-pending { background: #F4C55B; }
+
+.stat-divider {
+  height: 1px;
+  background: var(--color-outline-variant);
+  opacity: 0.15;
+  margin: 4px 0;
+}
+
+/* ── Progress bar ────────────────────────────────────────────────────────── */
+.income-progress-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.income-progress-labels {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-on-surface-muted);
+}
+
+.income-progress-bar {
+  height: 6px;
+  background: var(--color-surface-container);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.income-progress-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.5s ease;
+}
+
+.fill-good    { background: var(--color-secondary); }
+.fill-warning { background: #F4C55B; }
+.fill-danger  { background: var(--color-error); }
+
+/* ── Balance cards ───────────────────────────────────────────────────────── */
+.balance-cards {
+  display: grid;
+  /* grid-template-columns: 1fr 1fr; */
+  gap: 10px;
+}
+
+.balance-card {
+  border-radius: 0.875rem;
+  padding: 0.875rem;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.balance-positive { background: rgba(68, 221, 193, 0.07); }
+.balance-negative { background: rgba(255, 100, 100, 0.07); }
+
+.balance-card-label {
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-on-surface-muted);
+}
+
+.balance-card-amount {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.balance-positive .balance-card-amount { color: var(--color-secondary); }
+.balance-negative .balance-card-amount { color: var(--color-error); }
+
+.balance-card-hint {
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  color: var(--color-on-surface-muted);
+  line-height: 1.4;
+}
+
+.days-remaining-note {
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  color: var(--color-on-surface-muted);
+  margin: 0;
+  text-align: center;
+}
+
+/* ── Form row ────────────────────────────────────────────────────────────── */
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
 }
 
 /* ── Toast ────────────────────────────────────────────────────────────────── */

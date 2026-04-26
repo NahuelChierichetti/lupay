@@ -2,6 +2,7 @@
 import { ref, computed, reactive, nextTick, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useFinanceStore } from '../store/useFinanceStore'
 import { useAuthStore } from '../store/useAuthStore'
+import { useWalletStore } from '../store/useWalletStore'
 import { currency, monthKey } from '../utils/finance'
 import ExpenseDrawer from '../components/ExpenseDrawer.vue'
 import { listCollaborators } from '../services/collaboratorService'
@@ -11,7 +12,13 @@ import dayjs from 'dayjs'
 
 const store = useFinanceStore()
 const authStore = useAuthStore()
+const walletStore = useWalletStore()
 const { add: addToast } = useToast()
+
+// ── Wallet balance widget ─────────────────────────────────────────────────────
+const totalExpensesThisMonth = computed(() => store.dashboard?.totalSpent || 0)
+const walletHealth = computed(() => walletStore.financialHealth(totalExpensesThisMonth.value))
+const hasWalletData = computed(() => walletStore.totalExpected > 0)
 
 // ── Members (current user + collaborators) ────────────────────────────────
 const members = ref([])
@@ -422,6 +429,20 @@ function sortLabel(field) {
       </div>
     </div>
 
+    <!-- Wallet balance strip -->
+    <div v-if="hasWalletData" class="wallet-strip" :class="`strip-${walletHealth.status}`">
+      <div class="strip-left">
+        <span class="strip-emoji">{{ walletHealth.emoji }}</span>
+        <div class="strip-amounts">
+          <span class="strip-balance" :class="walletHealth.balanceNow >= 0 ? 'balance-ok' : 'balance-neg'">
+            {{ currency(walletHealth.balanceNow) }}
+          </span>
+          <span class="strip-label">saldo actual · proyección {{ currency(walletHealth.projectedBalance) }}</span>
+        </div>
+      </div>
+      <p class="strip-tip">{{ walletHealth.tip }}</p>
+    </div>
+
     <p v-if="store.error" class="error-text">{{ store.error }}</p>
 
     <!-- Table -->
@@ -703,6 +724,66 @@ function sortLabel(field) {
 </template>
 
 <style scoped>
+/* ── Wallet balance strip ─────────────────────────────────────────────────── */
+.wallet-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0.875rem 1.125rem;
+  border-radius: 1rem;
+  flex-wrap: wrap;
+}
+
+.strip-good    { background: rgba(68, 221, 193, 0.07); border: 1px solid rgba(68, 221, 193, 0.15); }
+.strip-ok      { background: rgba(144, 202, 249, 0.07); border: 1px solid rgba(144, 202, 249, 0.15); }
+.strip-warning { background: rgba(244, 197, 91, 0.07); border: 1px solid rgba(244, 197, 91, 0.15); }
+.strip-danger  { background: rgba(255, 100, 100, 0.07); border: 1px solid rgba(255, 100, 100, 0.15); }
+.strip-neutral { background: var(--color-surface-container); border: 1px solid var(--color-outline-variant); }
+
+.strip-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.strip-emoji {
+  font-size: 1.125rem;
+  line-height: 1;
+}
+
+.strip-amounts {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.strip-balance {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.balance-ok  { color: var(--color-secondary); }
+.balance-neg { color: var(--color-error); }
+
+.strip-label {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  color: var(--color-on-surface-muted);
+}
+
+.strip-tip {
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  margin: 0;
+  color: var(--color-on-surface-variant);
+  max-width: 480px;
+}
+
 /* ── Page layout ──────────────────────────────────────────────────────────── */
 .expenses-page {
   /* padding: 2rem 1.5rem; */

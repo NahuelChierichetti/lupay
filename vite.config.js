@@ -9,35 +9,38 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['src/utils/logo-lupay-green.png'],
+      includeAssets: ['logo-lupay-green.png'],
       manifest: {
         name: 'LUPAY - Gestor Financiero',
         short_name: 'LUPAY',
         description: 'Tu gestor financiero personal',
         theme_color: '#1e3a8a',
-        background_color: '#1e3a8a',
+        background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait',
         scope: '/',
         start_url: '/',
         icons: [
           {
-            src: '/src/utils/logo-lupay-green.png',
+            src: '/logo-lupay-green.png',
             sizes: '192x192',
             type: 'image/png',
           },
           {
-            src: '/src/utils/logo-lupay-green.png',
+            src: '/logo-lupay-green.png',
             sizes: '512x512',
             type: 'image/png',
           },
           {
-            src: '/src/utils/logo-lupay-green.png',
+            src: '/logo-lupay-green.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'any maskable',
+            purpose: 'maskable',
           },
         ],
+      },
+      devOptions: {
+        enabled: true,
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],

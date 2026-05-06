@@ -1,6 +1,7 @@
 <script setup>
 import { reactive, watch } from 'vue'
 import { Icon } from '@iconify/vue'
+import { formatCurrency, parseCurrency } from '../../utils/Helpers'
 
 const props = defineProps({
   modelValue: { type: Object, default: null },
@@ -60,10 +61,19 @@ watch(
   { immediate: true },
 )
 
+function handleTargetAmountInput(event) {
+  form.target_amount = formatCurrency(event?.target?.value || '', form.currency)
+}
+
+watch(() => form.currency, () => {
+  if (!form.target_amount) return
+  form.target_amount = formatCurrency(form.target_amount, form.currency)
+})
+
 function submit() {
   emit('save', {
     ...form,
-    target_amount: Number(form.target_amount),
+    target_amount: parseCurrency(form.target_amount, form.currency),
     saved_amount: Number(form.saved_amount || 0),
     savings_target: form.savings_target ? Number(form.savings_target) : null,
     savings_frequency: form.savings_frequency || null,
@@ -101,7 +111,7 @@ function submit() {
           <div class="goal-form-row">
             <div class="goal-form-field">
               <label class="label-sm">MONTO OBJETIVO</label>
-              <input v-model.number="form.target_amount" type="number" min="0" step="0.01" placeholder="5.000" required />
+              <input :value="form.target_amount" type="text" inputmode="decimal" :placeholder="form.currency === 'USD' ? '5,000' : '5.000'" required @input="handleTargetAmountInput" />
             </div>
             <div class="goal-form-field">
               <label class="label-sm">MONTO AHORRADO</label>

@@ -7,7 +7,9 @@ import { currency, monthKey } from '../utils/finance'
 import ExpenseDrawer from '../components/ExpenseDrawer.vue'
 import { listCollaborators } from '../services/collaboratorService'
 import { listWorkspaceUsers } from '../services/spacesService'
+import { getOrCreateProfile } from '../services/profileService'
 import { useToast } from '../composables/useToast'
+import { formatCurrency, parseCurrency, formatCurrencyDisplay } from '../utils/Helpers'
 import dayjs from 'dayjs'
 
 const store = useFinanceStore()
@@ -22,6 +24,8 @@ const hasWalletData = computed(() => walletStore.totalExpected > 0)
 
 // ── Members (current user + collaborators) ────────────────────────────────
 const members = ref([])
+const userCurrencyCode = ref('ARS')
+const amountPlaceholder = computed(() => (userCurrencyCode.value === 'USD' ? '0.00' : '0,00'))
 
 async function loadMembers() {
   const me = authStore.user
@@ -65,9 +69,19 @@ function normalizeCategoryName(name) {
   return String(name || '').trim().toLowerCase()
 }
 
+async function loadUserCurrency() {
+  try {
+    const profile = await getOrCreateProfile()
+    userCurrencyCode.value = profile?.currency_code === 'USD' ? 'USD' : 'ARS'
+  } catch {
+    userCurrencyCode.value = 'ARS'
+  }
+}
+
 onMounted(() => {
   loadMembers()
   store.refreshCategories()
+  loadUserCurrency()
 })
 
 watch(() => store.currentSpaceId, loadMembers)
@@ -78,7 +92,23 @@ const showDrawer = ref(false)
 const editingExpense = ref(null)
 const selectedResponsibleId = ref('')
 const sortBy = ref('payment_date')
-const sortDirection = ref('desc')
+const sortDirection = ref('asc')
+const draftFilters = reactive({
+  name: '',
+  startDate: '',
+  endDate: '',
+  category: '',
+  status: '',
+})
+const appliedFilters = reactive({
+  name: '',
+  startDate: '',
+  endDate: '',
+  category: '',
+  status: '',
+})
+const filterLoading = ref(false)
+const showMobileFilters = ref(false)
 
 function openAddExpense() {
   editingExpense.value = null
@@ -137,8 +167,42 @@ const visibleExpenses = computed(() => {
   return monthExpenses.value.filter((e) => e.responsible_user_id === selectedResponsibleId.value)
 })
 
+const filteredExpenses = computed(() => {
+  const nameFilter = appliedFilters.name.trim().toLowerCase()
+  return visibleExpenses.value.filter((e) => {
+    if (nameFilter && !String(e.description || '').toLowerCase().includes(nameFilter)) return false
+    if (appliedFilters.status && e.status !== appliedFilters.status) return false
+    if (appliedFilters.category && !getExpenseCategories(e).includes(appliedFilters.category)) return false
+    if (appliedFilters.startDate && dayjs(e.payment_date).isBefore(dayjs(appliedFilters.startDate), 'day')) return false
+    if (appliedFilters.endDate && dayjs(e.payment_date).isAfter(dayjs(appliedFilters.endDate), 'day')) return false
+    return true
+  })
+})
+
+async function applyFilters() {
+  filterLoading.value = true
+  await nextTick()
+  Object.assign(appliedFilters, draftFilters)
+  await new Promise((resolve) => setTimeout(resolve, 2000))
+  filterLoading.value = false
+}
+
+function clearFilters() {
+  draftFilters.name = ''
+  draftFilters.startDate = ''
+  draftFilters.endDate = ''
+  draftFilters.category = ''
+  draftFilters.status = ''
+  Object.assign(appliedFilters, draftFilters)
+}
+
+async function applyFiltersFromMobile() {
+  await applyFilters()
+  showMobileFilters.value = false
+}
+
 const sortedExpenses = computed(() => {
-  const items = [...visibleExpenses.value]
+  const items = [...filteredExpenses.value]
   if (!sortBy.value) return items
 
   items.sort((a, b) => {
@@ -159,22 +223,22 @@ const sortedExpenses = computed(() => {
 // ── Custom columns ────────────────────────────────────────────────────────────
 // Each: { key, name, type: 'texto' | 'fecha' | 'precio' | 'seleccionar' }
 const customColumns = ref([])
-const showAddColumn = ref(false)
-const newColName = ref('')
-const newColType = ref('texto')
+// const showAddColumn = ref(false)
+// const newColName = ref('')
+// const newColType = ref('texto')
 
-function openAddColumn() {
-  newColName.value = ''
-  newColType.value = 'texto'
-  showAddColumn.value = true
-}
+// function openAddColumn() {
+//   newColName.value = ''
+//   newColType.value = 'texto'
+//   showAddColumn.value = true
+// }
 
-function confirmAddColumn() {
-  const name = newColName.value.trim()
-  if (!name) return
-  customColumns.value.push({ key: `custom_${Date.now()}`, name, type: newColType.value })
-  showAddColumn.value = false
-}
+// function confirmAddColumn() {
+//   const name = newColName.value.trim()
+//   if (!name) return
+//   customColumns.value.push({ key: `custom_${Date.now()}`, name, type: newColType.value })
+//   showAddColumn.value = false
+// }
 
 // ── Inline new row ────────────────────────────────────────────────────────────
 const showNewRow = ref(false)
@@ -191,24 +255,47 @@ const newRow = reactive({
 const newRowCategoryOpen = ref(false)
 const newRowCategoryRef = ref(null)
 const newRowCategoryTriggerRef = ref(null)
+const newRowCategoryMenuRef = ref(null)
 const newRowDropdownStyle = ref({})
 
 function updateDropdownPosition() {
   const el = newRowCategoryTriggerRef.value
   if (!el) return
+
   const rect = el.getBoundingClientRect()
+  const viewportPadding = 8
+  const offset = 4
+  const maxMenuHeight = 260
+  const measuredMenuHeight = newRowCategoryMenuRef.value?.offsetHeight || maxMenuHeight
+
+  const spaceBelow = Math.max(0, window.innerHeight - rect.bottom - viewportPadding)
+  const spaceAbove = Math.max(0, rect.top - viewportPadding)
+  const needsOpenUp = spaceBelow < Math.min(measuredMenuHeight, maxMenuHeight) && spaceAbove > spaceBelow
+  const availableHeight = Math.max(
+    120,
+    Math.min(maxMenuHeight, needsOpenUp ? spaceAbove - offset : spaceBelow - offset),
+  )
+
   newRowDropdownStyle.value = {
     position: 'fixed',
-    top: `${rect.bottom + 4}px`,
     left: `${rect.left}px`,
     width: `${rect.width}px`,
+    maxHeight: `${availableHeight}px`,
     zIndex: 9999,
+    ...(needsOpenUp
+      ? { bottom: `${window.innerHeight - rect.top + offset}px` }
+      : { top: `${rect.bottom + offset}px` }),
   }
+}
+
+function handleNewRowCategoryViewportChange() {
+  if (!newRowCategoryOpen.value) return
+  updateDropdownPosition()
 }
 
 function toggleNewRowCategory() {
   newRowCategoryOpen.value = !newRowCategoryOpen.value
-  if (newRowCategoryOpen.value) updateDropdownPosition()
+  if (newRowCategoryOpen.value) nextTick(updateDropdownPosition)
 }
 function toggleNewRowCategoryValue(name) {
   if (newRow.categories.includes(name)) {
@@ -221,8 +308,16 @@ function handleNewRowOutside(event) {
   if (!newRowCategoryRef.value) return
   if (!newRowCategoryRef.value.contains(event.target)) newRowCategoryOpen.value = false
 }
-onMounted(() => document.addEventListener('mousedown', handleNewRowOutside))
-onBeforeUnmount(() => document.removeEventListener('mousedown', handleNewRowOutside))
+onMounted(() => {
+  document.addEventListener('mousedown', handleNewRowOutside)
+  window.addEventListener('resize', handleNewRowCategoryViewportChange)
+  window.addEventListener('scroll', handleNewRowCategoryViewportChange, true)
+})
+onBeforeUnmount(() => {
+  document.removeEventListener('mousedown', handleNewRowOutside)
+  window.removeEventListener('resize', handleNewRowCategoryViewportChange)
+  window.removeEventListener('scroll', handleNewRowCategoryViewportChange, true)
+})
 
 function startNewRow() {
   Object.assign(newRow, {
@@ -241,11 +336,21 @@ function startNewRow() {
   })
 }
 
+function handleAmountInput(event) {
+  newRow.amount = formatCurrency(event?.target?.value || '', userCurrencyCode.value)
+}
+
+watch(userCurrencyCode, () => {
+  if (!newRow.amount) return
+  newRow.amount = formatCurrency(newRow.amount, userCurrencyCode.value)
+})
+
 async function saveNewRow() {
-  if (!newRow.description || !newRow.amount) return
+  const parsedAmount = parseCurrency(newRow.amount, userCurrencyCode.value)
+  if (!newRow.description || Number.isNaN(parsedAmount)) return
   await store.upsertExpense({
     description: newRow.description,
-    amount: Number(newRow.amount),
+    amount: parsedAmount,
     payment_date: newRow.payment_date || `${store.month}-01`,
     status: newRow.status || 'pending',
     categories: [...newRow.categories],
@@ -270,6 +375,10 @@ function cancelNewRow() {
 function formatDate(date) {
   if (!date) return '—'
   return dayjs(date).format('DD/MM/YYYY')
+}
+
+function formatAmountForTable(amount) {
+  return formatCurrencyDisplay(amount, userCurrencyCode.value)
 }
 
 const STATUS_MAP = {
@@ -388,7 +497,7 @@ function toggleSort(field) {
     return
   }
   sortBy.value = field
-  sortDirection.value = field === 'payment_date' ? 'desc' : 'asc'
+  sortDirection.value = 'asc'
 }
 
 function sortLabel(field) {
@@ -430,7 +539,7 @@ function sortLabel(field) {
     </div>
 
     <!-- Wallet balance strip -->
-    <div v-if="hasWalletData" class="wallet-strip" :class="`strip-${walletHealth.status}`">
+    <!-- <div v-if="hasWalletData" class="wallet-strip" :class="`strip-${walletHealth.status}`">
       <div class="strip-left">
         <span class="strip-emoji">{{ walletHealth.emoji }}</span>
         <div class="strip-amounts">
@@ -441,9 +550,113 @@ function sortLabel(field) {
         </div>
       </div>
       <p class="strip-tip">{{ walletHealth.tip }}</p>
-    </div>
+    </div> -->
 
     <p v-if="store.error" class="error-text">{{ store.error }}</p>
+
+    <button class="mobile-filter-trigger" type="button" @click="showMobileFilters = true">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6h12"/><path d="M4 12h16"/><path d="M10 18h4"/></svg>
+      Filtrar gastos
+    </button>
+
+    <div class="table-filters table-filters--desktop">
+      <div class="filter-group">
+        <label class="filter-label">Nombre</label>
+        <input v-model="draftFilters.name" class="filter-input" placeholder="Filtrar por nombre" @keydown.enter.prevent="applyFilters" />
+      </div>
+      <div class="filter-group">
+        <label class="filter-label">Desde</label>
+        <input v-model="draftFilters.startDate" class="filter-input" type="date" />
+      </div>
+      <div class="filter-group">
+        <label class="filter-label">Hasta</label>
+        <input v-model="draftFilters.endDate" class="filter-input" type="date" />
+      </div>
+      <div class="filter-group">
+        <label class="filter-label">Categoría</label>
+        <select v-model="draftFilters.category" class="filter-input filter-select">
+          <option value="">Todas las categorías</option>
+          <option v-for="cat in categoryOptions" :key="cat.id || cat.name" :value="cat.name || cat">{{ cat.name || cat }}</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label class="filter-label">Estado</label>
+        <select v-model="draftFilters.status" class="filter-input filter-select">
+          <option value="">Todos los estados</option>
+          <option value="pending">Pendiente</option>
+          <option value="paid">Pagado</option>
+          <option value="overdue">Vencido</option>
+        </select>
+      </div>
+      <div class="filter-group filter-group--actions">
+        <label class="filter-label">Acciones</label>
+        <div class="filter-actions">
+          <button type="button" class="search-icon-btn" :disabled="filterLoading" @click="applyFilters">
+            <span v-if="!filterLoading" class="search-btn-label">Buscar</span>
+            <span v-else class="btn-spinner" />
+          </button>
+          <button type="button" class="search-icon-btn search-icon-btn--secondary" @click="clearFilters">
+            <span class="search-btn-label">Limpiar</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <Teleport to="body">
+      <Transition name="mobile-filter">
+        <div v-if="showMobileFilters" class="mobile-filter-overlay" @click.self="showMobileFilters = false">
+          <div class="mobile-filter-modal">
+            <div class="mobile-filter-header">
+              <h4>Filtrar gastos</h4>
+              <button type="button" class="mobile-filter-close" @click="showMobileFilters = false">✕</button>
+            </div>
+            <div class="table-filters table-filters--mobile">
+              <div class="filter-group">
+                <label class="filter-label">Nombre</label>
+                <input v-model="draftFilters.name" class="filter-input" placeholder="Filtrar por nombre" @keydown.enter.prevent="applyFiltersFromMobile" />
+              </div>
+              <div class="filter-group">
+                <label class="filter-label">Desde</label>
+                <input v-model="draftFilters.startDate" class="filter-input" type="date" />
+              </div>
+              <div class="filter-group">
+                <label class="filter-label">Hasta</label>
+                <input v-model="draftFilters.endDate" class="filter-input" type="date" />
+              </div>
+              <div class="filter-group">
+                <label class="filter-label">Categoría</label>
+                <select v-model="draftFilters.category" class="filter-input filter-select">
+                  <option value="">Todas las categorías</option>
+                  <option v-for="cat in categoryOptions" :key="`mobile-${cat.id || cat.name}`" :value="cat.name || cat">{{ cat.name || cat }}</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label class="filter-label">Estado</label>
+                <select v-model="draftFilters.status" class="filter-input filter-select">
+                  <option value="">Todos los estados</option>
+                  <option value="pending">Pendiente</option>
+                  <option value="paid">Pagado</option>
+                  <option value="overdue">Vencido</option>
+                </select>
+              </div>
+              <div class="filter-actions">
+                <button type="button" class="search-icon-btn" :disabled="filterLoading" @click="applyFiltersFromMobile">
+                  <span v-if="!filterLoading" class="search-btn-label">Buscar</span>
+                  <span v-else class="btn-spinner" />
+                </button>
+                <button type="button" class="search-icon-btn search-icon-btn--secondary" @click="clearFilters">
+                  <span class="search-btn-label">Limpiar</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <div v-if="filterLoading" class="table-filter-loader">
+      <span class="loader-spinner" /> Buscando gastos...
+    </div>
 
     <!-- Table -->
     <div class="table-wrap">
@@ -468,7 +681,7 @@ function sortLabel(field) {
         <tbody>
           <tr v-for="item in sortedExpenses" :key="item.id" class="expense-tr" @dblclick="openEditExpense(item)">
             <td class="col-gasto">{{ item.description }}</td>
-            <td class="col-monto">{{ currency(item.amount) }}</td>
+            <td class="col-monto">{{ formatAmountForTable(item.amount) }}</td>
             <td class="col-fecha">{{ formatDate(item.payment_date) }}</td>
             <td class="col-estado">
               <span :class="['badge', statusInfo(item.status).class]">{{ statusInfo(item.status).label }}</span>
@@ -529,12 +742,12 @@ function sortLabel(field) {
             </td>
             <td class="col-monto">
               <input
-                v-model="newRow.amount"
+                :value="newRow.amount"
                 class="cell-input"
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="0,00"
+                type="text"
+                inputmode="decimal"
+                :placeholder="amountPlaceholder"
+                @input="handleAmountInput"
                 @keydown.enter.prevent="saveNewRow"
                 @keydown.escape="cancelNewRow"
               />
@@ -569,7 +782,12 @@ function sortLabel(field) {
                 </button>
                 <Teleport to="body">
                   <Transition name="dropdown">
-                    <div v-if="newRowCategoryOpen" class="cell-multi-menu" :style="newRowDropdownStyle">
+                    <div
+                      v-if="newRowCategoryOpen"
+                      ref="newRowCategoryMenuRef"
+                      class="cell-multi-menu"
+                      :style="newRowDropdownStyle"
+                    >
                       <p v-if="!categoryOptions.length" class="cell-multi-empty">
                         Crea una categoría en Configuración.
                       </p>
@@ -644,13 +862,13 @@ function sortLabel(field) {
                   </svg>
                   Agregar fila
                 </button>
-                <span class="tfoot-separator">|</span>
-                <button class="tfoot-btn" @click="openAddColumn">
+                <!-- <span class="tfoot-separator">|</span> -->
+                <!-- <button class="tfoot-btn" @click="openAddColumn">
                   <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
                   </svg>
                   Agregar columna
-                </button>
+                </button> -->
               </div>
             </td>
           </tr>
@@ -659,7 +877,7 @@ function sortLabel(field) {
     </div>
 
     <!-- Add column modal -->
-    <Teleport to="body">
+    <!-- <Teleport to="body">
       <Transition name="fade">
         <div v-if="showAddColumn" class="modal-backdrop" @click.self="showAddColumn = false">
           <div class="modal-card">
@@ -689,7 +907,7 @@ function sortLabel(field) {
           </div>
         </div>
       </Transition>
-    </Teleport>
+    </Teleport> -->
 
     <!-- Expense drawer -->
     <ExpenseDrawer
@@ -697,6 +915,7 @@ function sortLabel(field) {
       :model-value="editingExpense"
       :categories="categoryOptions"
       :members="members"
+      :currency-code="userCurrencyCode"
       @save="saveExpense"
       @close="showDrawer = false"
     />
@@ -888,6 +1107,195 @@ function sortLabel(field) {
 }
 
 /* ── Table ────────────────────────────────────────────────────────────────── */
+.mobile-filter-trigger {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  padding: 8px 12px;
+  border: 1px solid var(--color-outline-variant);
+  border-radius: 999px;
+  background: var(--color-surface-container-high);
+  color: var(--color-on-surface-variant);
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+}
+
+.table-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+  align-items: center;
+}
+
+.table-filters--mobile {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.table-filters--mobile .filter-group,
+.table-filters--mobile .filter-input,
+.table-filters--mobile .filter-select {
+  width: 100%;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.filter-label {
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-on-surface-muted);
+}
+
+.filter-input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--color-outline-variant);
+  border-radius: 8px;
+  background: var(--color-surface-container-high);
+  color: var(--color-on-surface);
+  font-family: var(--font-body);
+}
+
+.filter-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B6876' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 30px;
+}
+
+.filter-group--actions {
+  justify-content: flex-end;
+}
+
+.filter-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.search-icon-btn {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--color-outline-variant);
+  border-radius: 20px;
+  background: #bac3ff;
+  color: #0e1a6e;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.search-btn-label {
+  color: #0e1a6e;
+  font-weight: 600;
+}
+
+.search-icon-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: #bac3ff;
+  color: #0e1a6e !important;
+}
+
+.search-icon-btn--secondary {
+  background: var(--color-surface-container-high);
+  color: var(--color-on-surface-variant);
+  border: 1px solid var(--color-outline-variant);
+}
+
+.search-icon-btn--secondary .search-btn-label {
+  color: var(--color-on-surface-variant);
+}
+
+.btn-spinner,
+.loader-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(107, 104, 118, 0.35);
+  border-top-color: var(--color-secondary);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.table-filter-loader {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--color-on-surface-muted);
+}
+
+.mobile-filter-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.52);
+  z-index: 120;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.mobile-filter-modal {
+  width: min(560px, 100%);
+  background: var(--color-surface-bright);
+  border-radius: 16px 16px 0 0;
+  padding: 14px;
+}
+
+.mobile-filter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.mobile-filter-header h4 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.mobile-filter-close {
+  border: none;
+  background: transparent;
+  color: var(--color-on-surface-muted);
+  font-size: 1rem;
+}
+
+.mobile-filter-enter-active,
+.mobile-filter-leave-active { transition: opacity 0.18s ease; }
+.mobile-filter-enter-from,
+.mobile-filter-leave-to { opacity: 0; }
+
+@media (max-width: 768px) {
+  .mobile-filter-trigger { display: inline-flex; }
+  .table-filters--desktop { display: none; }
+  .table-filters--mobile .filter-actions {
+    margin-top: 10px;
+    margin-bottom: 10px;
+    width: 100%;
+  }
+  .table-filters--mobile .filter-actions .search-icon-btn {
+    flex: 1 1 50%;
+    width: 50%;
+  }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 .table-wrap {
   background: var(--color-surface-container-high);
   border-radius: 1rem;

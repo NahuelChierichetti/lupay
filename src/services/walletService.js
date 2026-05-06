@@ -31,8 +31,8 @@ export async function saveIncome(income, spaceId) {
     amount: Number(income.amount || 0),
     expected_day: Number(income.expected_day || 1),
     status: income.status || 'pending',
-    recurrence: income.recurrence || 'monthly',
-    month: income.recurrence === 'once' ? (income.month || null) : null,
+    recurrence: 'monthly',
+    month: income.month || null,
     user_id: userId,
     space_id: spaceId,
   }

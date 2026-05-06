@@ -46,6 +46,14 @@ const incomePercent = computed(() => {
   return Math.min(100, Math.round((totalExpensesThisMonth.value / total) * 100))
 })
 
+function formatIncomeMonth(month) {
+  const target = month || walletStore.currentMonth
+  if (!target) return ''
+  const [year, monthNumber] = target.split('-')
+  return new Intl.DateTimeFormat('es-AR', { month: 'long', year: 'numeric' })
+    .format(new Date(Number(year), Number(monthNumber) - 1, 1))
+}
+
 function openNewIncome() {
   Object.assign(incomeForm, {
     id: null,
@@ -54,7 +62,7 @@ function openNewIncome() {
     expected_day: 1,
     status: 'pending',
     recurrence: 'monthly',
-    month: dayjs().format('YYYY-MM'),
+    month: walletStore.currentMonth,
   })
   incomeError.value = ''
   showIncomeForm.value = true
@@ -67,8 +75,8 @@ function editIncome(income) {
     amount: income.amount,
     expected_day: income.expected_day || 1,
     status: income.status || 'pending',
-    recurrence: income.recurrence || 'monthly',
-    month: income.month || dayjs().format('YYYY-MM'),
+    recurrence: 'monthly',
+    month: income.month || walletStore.currentMonth,
   })
   incomeError.value = ''
   showIncomeForm.value = true
@@ -82,10 +90,15 @@ async function submitIncome() {
   const desc = incomeForm.description.trim()
   if (!desc) { incomeError.value = 'El detalle es requerido'; return }
   if (!incomeForm.amount || Number(incomeForm.amount) <= 0) { incomeError.value = 'Ingresá un monto válido'; return }
+  if (!incomeForm.month) { incomeError.value = 'Seleccioná el mes del ingreso'; return }
   incomeLoading.value = true
   incomeError.value = ''
   try {
-    await walletStore.upsertIncome({ ...incomeForm })
+    await walletStore.upsertIncome({
+      ...incomeForm,
+      recurrence: 'monthly',
+      month: incomeForm.month,
+    })
     showIncomeForm.value = false
     showToast(incomeForm.id ? 'Ingreso actualizado' : 'Ingreso agregado')
   } catch (err) {
@@ -402,6 +415,15 @@ async function loadData(spaceId) {
 }
 
 watch(
+  () => financeStore.month,
+  (month) => {
+    walletStore.setCurrentMonth(month)
+    if (!incomeForm.id) incomeForm.month = month
+  },
+  { immediate: true },
+)
+
+watch(
   () => spaceStore.currentSpaceId,
   (spaceId) => loadData(spaceId),
   { immediate: true },
@@ -622,7 +644,7 @@ watch(
         <div class="wallet-incomes-section">
           <div class="section-header">
             <h3 class="section-title">Fuentes de Ingreso</h3>
-            <p class="section-subtitle">Registrá tus ingresos mensuales para proyectar tu economía.</p>
+            <p class="section-subtitle">Gestioná los ingresos de {{ formatIncomeMonth(walletStore.currentMonth) }} para proyectar tu economía.</p>
           </div>
 
           <div class="income-list">
@@ -645,7 +667,7 @@ watch(
               <div class="income-info">
                 <span class="income-description">{{ income.description }}</span>
                 <span class="income-meta">
-                  {{ income.recurrence === 'monthly' ? 'Mensual' : 'Único' }}
+                  {{ formatIncomeMonth(income.month || walletStore.currentMonth) }}
                   · Esperado día {{ income.expected_day }}
                 </span>
               </div>
@@ -665,7 +687,7 @@ watch(
             </div>
 
             <div v-if="walletStore.monthlyIncomes.length === 0 && !walletStore.loading" class="empty-state">
-              No hay ingresos registrados. Agregá tu primer fuente de ingreso.
+              No hay ingresos registrados para este mes. Agregá tu primera fuente de ingreso.
             </div>
           </div>
 
@@ -777,11 +799,8 @@ watch(
 
             <div class="form-row">
               <div class="form-field">
-                <label>Recurrencia</label>
-                <select v-model="incomeForm.recurrence">
-                  <option value="monthly">Mensual</option>
-                  <option value="once">Una vez</option>
-                </select>
+                <label>Mes</label>
+                <input v-model="incomeForm.month" type="month" />
               </div>
               <div class="form-field">
                 <label>Día esperado</label>
@@ -793,11 +812,6 @@ watch(
                   placeholder="1"
                 />
               </div>
-            </div>
-
-            <div v-if="incomeForm.recurrence === 'once'" class="form-field">
-              <label>Mes</label>
-              <input v-model="incomeForm.month" type="month" />
             </div>
 
             <div class="form-field">
@@ -1667,7 +1681,7 @@ watch(
   justify-content: center;
   width: 28px;
   height: 28px;
-  padding: 0;
+  padding: 0 !important;
   border: none;
   background: none;
   border-radius: 6px;
@@ -1675,7 +1689,7 @@ watch(
   color: var(--color-on-surface-muted);
   transition: background 0.15s, color 0.15s;
   flex-shrink: 0;
-  opacity: 0;
+  opacity: 1;
 }
 .member-row:hover .icon-btn { opacity: 1; }
 .icon-btn.danger:hover { background: rgba(255, 180, 171, 0.12); color: var(--color-error); }
@@ -1794,7 +1808,7 @@ watch(
 .income-actions {
   display: flex;
   gap: 4px;
-  opacity: 0;
+  opacity: 1;
   flex-shrink: 0;
 }
 

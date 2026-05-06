@@ -12,10 +12,13 @@ export const useWalletStore = defineStore('wallet', {
   }),
   getters: {
     monthlyIncomes(state) {
-      return state.incomes.filter((i) => {
-        if (i.recurrence === 'monthly') return true
-        return i.month === state.currentMonth
-      })
+      return state.incomes
+        .filter((i) => {
+          if (i.month) return i.month === state.currentMonth
+          const isLegacyMonthly = i.recurrence === 'monthly' && !i.month
+          return isLegacyMonthly && state.currentMonth === dayjs().format('YYYY-MM')
+        })
+        .sort((a, b) => Number(a.expected_day || 1) - Number(b.expected_day || 1))
     },
     paidIncomes() {
       return this.monthlyIncomes.filter((i) => i.status === 'paid')
@@ -96,10 +99,18 @@ export const useWalletStore = defineStore('wallet', {
         this.loading = false
       }
     },
+    setCurrentMonth(month) {
+      this.currentMonth = month || dayjs().format('YYYY-MM')
+    },
     async upsertIncome(payload) {
       this.error = ''
       try {
-        const saved = await saveIncome(payload, this.currentSpaceId)
+        const normalized = {
+          ...payload,
+          recurrence: 'monthly',
+          month: payload.month || this.currentMonth,
+        }
+        const saved = await saveIncome(normalized, this.currentSpaceId)
         const idx = this.incomes.findIndex((i) => i.id === saved.id)
         if (idx >= 0) this.incomes[idx] = saved
         else this.incomes.push(saved)
@@ -121,7 +132,11 @@ export const useWalletStore = defineStore('wallet', {
     },
     async toggleStatus(income) {
       const newStatus = income.status === 'paid' ? 'pending' : 'paid'
-      await this.upsertIncome({ ...income, status: newStatus })
+      await this.upsertIncome({
+        ...income,
+        status: newStatus,
+        month: income.month || this.currentMonth,
+      })
     },
   },
 })

@@ -6,8 +6,12 @@
     >
       <img src="./../../utils/logo-lupay-green.png" alt="LUPAY" class="w-12 h-12 rounded-xl flex-shrink-0" />
       <div class="flex-1 min-w-0">
-        <p class="font-semibold text-on-surface text-sm">Instalar LUPAY</p>
-        <p class="text-xs text-on-surface truncate">Agregá la app a tu pantalla de inicio</p>
+        <p class="font-semibold text-on-surface text-sm">
+          {{ isIos ? 'Instalar en iPhone' : 'Instalar LUPAY' }}
+        </p>
+        <p class="text-xs text-on-surface truncate">
+          {{ isIos ? 'Abrí Compartir y elegí “Agregar a pantalla de inicio”' : 'Agregá la app a tu pantalla de inicio' }}
+        </p>
       </div>
       <div class="flex gap-2 flex-shrink-0">
         <button
@@ -17,10 +21,10 @@
           No
         </button>
         <button
-          @click="install"
-          class="text-xs font-semibold text-[#0e1a6e] bg-[#bac3ff] px-3 py-1 rounded-lg hover:bg-bg-[#bac3ff]"
+          @click="handlePrimaryAction"
+          class="text-xs font-semibold text-[#0e1a6e] bg-[#bac3ff] px-3 py-1 rounded-lg hover:bg-[#bac3ff]"
         >
-          Instalar
+          {{ isIos ? 'Entendido' : 'Instalar' }}
         </button>
       </div>
     </div>
@@ -31,6 +35,8 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 
 const showPrompt = ref(false)
+const isIos = ref(false)
+const isStandalone = ref(false)
 let deferredPrompt = null
 
 function handleBeforeInstall(e) {
@@ -40,9 +46,13 @@ function handleBeforeInstall(e) {
   if (!dismissed) showPrompt.value = true
 }
 
-async function install() {
+async function handlePrimaryAction() {
+  if (isIos.value || !deferredPrompt) {
+    dismiss()
+    return
+  }
+
   showPrompt.value = false
-  if (!deferredPrompt) return
   deferredPrompt.prompt()
   await deferredPrompt.userChoice
   deferredPrompt = null
@@ -53,7 +63,17 @@ function dismiss() {
   localStorage.setItem('pwa-install-dismissed', '1')
 }
 
-onMounted(() => window.addEventListener('beforeinstallprompt', handleBeforeInstall))
+onMounted(() => {
+  isIos.value = /iPad|iPhone|iPod/.test(window.navigator.userAgent)
+  isStandalone.value = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true
+
+  const dismissed = localStorage.getItem('pwa-install-dismissed')
+  if (isIos.value && !isStandalone.value && !dismissed) {
+    showPrompt.value = true
+  }
+
+  window.addEventListener('beforeinstallprompt', handleBeforeInstall)
+})
 onUnmounted(() => window.removeEventListener('beforeinstallprompt', handleBeforeInstall))
 </script>
 

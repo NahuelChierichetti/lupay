@@ -1,12 +1,14 @@
 <script setup>
 import { reactive, ref, watch, computed, onMounted, onBeforeUnmount } from 'vue'
 import { currency } from '../utils/finance'
+import { formatCurrency, parseCurrency } from '../utils/Helpers'
 
 const props = defineProps({
   open: { type: Boolean, default: false },
   modelValue: { type: Object, default: null },
   categories: { type: Array, default: () => [] },
   members: { type: Array, default: () => [] },
+  currencyCode: { type: String, default: 'ARS' },
 })
 
 const emit = defineEmits(['save', 'close'])
@@ -49,6 +51,17 @@ function closeCategoryMenu() {
   categoryMenuOpen.value = false
 }
 
+function formatAmountForInput(value) {
+  if (value === null || value === undefined || value === '') return ''
+  const numeric = Number(value)
+  if (Number.isNaN(numeric)) return formatCurrency(String(value), props.currencyCode)
+  const locale = props.currencyCode === 'USD' ? 'en-US' : 'es-AR'
+  return new Intl.NumberFormat(locale, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(numeric)
+}
+
 function syncForm(val) {
   Object.assign(form, {
     ...getDefaultForm(),
@@ -56,6 +69,7 @@ function syncForm(val) {
     categories: normalizeCategoriesInput(val),
     installments: val?.installments || val?.installment_total || 1,
   })
+  form.amount = formatAmountForInput(form.amount)
 }
 
 watch(
@@ -109,10 +123,21 @@ function categoryColor(name) {
   return '#6b7280'
 }
 
+const amountPlaceholder = computed(() => (props.currencyCode === 'USD' ? '0.00' : '0,00'))
+
+function handleAmountInput(event) {
+  form.amount = formatCurrency(event?.target?.value || '', props.currencyCode)
+}
+
+watch(() => props.currencyCode, () => {
+  if (!form.amount) return
+  form.amount = formatCurrency(form.amount, props.currencyCode)
+})
+
 function submit() {
   emit('save', {
     ...form,
-    amount: Number(form.amount),
+    amount: parseCurrency(form.amount, props.currencyCode),
     installments: Number(form.installments || 1),
     categories: [...form.categories],
     category: form.categories[0] || '',
@@ -146,7 +171,7 @@ function submit() {
             <label>Monto</label>
             <div class="input-prefix-wrap">
               <span class="input-prefix">$</span>
-              <input v-model.number="form.amount" type="number" min="0" step="0.01" placeholder="0,00" required class="input-prefixed" />
+              <input :value="form.amount" type="text" inputmode="decimal" :placeholder="amountPlaceholder" required class="input-prefixed" @input="handleAmountInput" />
             </div>
           </div>
 

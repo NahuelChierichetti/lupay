@@ -856,13 +856,17 @@ progress::-moz-progress-bar {
 /* Distribution Layout */
 .distribution-layout {
   display: flex;
-  align-items: center;
-  gap: 1.5rem;
-  flex-wrap: wrap;
-  justify-content: center;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1rem;
+  margin-top: 1rem;
+  width: 100%;
 }
 
 .distribution-chart {
+  width: 100%;
+  max-width: 260px;
+  margin: 0 auto;
   flex-shrink: 0;
 }
 
@@ -872,12 +876,14 @@ progress::-moz-progress-bar {
   padding: 0;
   display: grid;
   gap: 0.75rem;
+  width: 100%;
 }
 
 .distribution-legend__item {
-  display: flex;
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 0.5rem;
+  column-gap: 0.75rem;
 }
 
 .distribution-legend__dot {
@@ -899,6 +905,8 @@ progress::-moz-progress-bar {
   font-size: 0.875rem;
   font-weight: 700;
   color: var(--color-on-surface);
+  text-align: right;
+  min-width: 3ch;
 }
 
 /* Bottom Grid */
@@ -917,7 +925,9 @@ progress::-moz-progress-bar {
 .planning-bottom-grid > .planning-chart-card .distribution-layout {
   flex: 1;
   display: flex;
-  align-items: center;
+  justify-content: flex-start;
+  align-items: stretch;
+  width: 100%;
 }
 
 /* Insight Card */
@@ -1247,6 +1257,22 @@ progress::-moz-progress-bar {
   .planning-bottom-grid {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     align-items: start;
+  }
+
+  .planning-bottom-grid > .planning-chart-card .distribution-layout {
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 2.25rem;
+  }
+
+  .planning-bottom-grid > .planning-chart-card .distribution-chart {
+    margin: 0;
+    max-width: 300px;
+  }
+
+  .planning-bottom-grid > .planning-chart-card .distribution-legend {
+    width: min(360px, 100%);
   }
 }
 

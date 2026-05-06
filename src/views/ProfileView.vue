@@ -157,10 +157,6 @@ const ROLE_LABEL = { editor: 'Editor', viewer: 'Visor' }
 const CURRENCIES = [
   { code: 'ARS', label: 'ARS - Peso argentino' },
   { code: 'USD', label: 'USD - Dólar estadounidense' },
-  { code: 'EUR', label: 'EUR - Euro' },
-  { code: 'BRL', label: 'BRL - Real brasileño' },
-  { code: 'CLP', label: 'CLP - Peso chileno' },
-  { code: 'MXN', label: 'MXN - Peso mexicano' },
 ]
 
 // ── Deactivate account ────────────────────────────────────────────────────────

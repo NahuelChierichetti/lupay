@@ -6,6 +6,7 @@ import { useSpaceStore } from '../store/useSpaceStore'
 import { useToast } from '../composables/useToast'
 import CreditCardModal from '../components/CreditCardModal.vue'
 import InstallmentDrawer from '../components/InstallmentDrawer.vue'
+import { formatCurrencyDisplay } from '../utils/Helpers'
 import dayjs from 'dayjs'
 import 'dayjs/locale/es'
 
@@ -199,11 +200,7 @@ const cardInstallmentsForMonth = computed(() => {
 
 // ── Formatting ────────────────────────────────────────────────────────────────
 function currency(amount) {
-  return new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS',
-    maximumFractionDigits: 0,
-  }).format(Number(amount || 0))
+  return formatCurrencyDisplay(amount, 'ARS')
 }
 
 // ── Card color resolution ─────────────────────────────────────────────────────

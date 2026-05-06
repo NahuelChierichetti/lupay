@@ -1,22 +1,16 @@
 import dayjs from 'dayjs'
+import { formatCurrencyDisplay } from './Helpers'
 
 export function monthKey(date) {
   return dayjs(date).format('YYYY-MM')
 }
 
-export function currency(amount) {
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(
-    Number(amount || 0),
-  )
+export function currency(amount, currencyCode = 'ARS') {
+  return formatCurrencyDisplay(amount, currencyCode)
 }
 
 export function goalCurrency(amount, currencyCode = 'ARS') {
-  if (currencyCode === 'USD') {
-    return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(
-      Number(amount || 0),
-    )
-  }
-  return currency(amount)
+  return formatCurrencyDisplay(amount, currencyCode)
 }
 
 export function withInstallments(expense) {

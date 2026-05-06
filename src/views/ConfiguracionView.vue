@@ -6,6 +6,8 @@ import { useSpaceStore } from '../store/useSpaceStore'
 import { useFinanceStore } from '../store/useFinanceStore'
 import { useWalletStore } from '../store/useWalletStore'
 import { currency } from '../utils/finance'
+import { formatCurrency, parseCurrency } from '../utils/Helpers'
+import { getOrCreateProfile } from '../services/profileService'
 import dayjs from 'dayjs'
 
 const spaceStore = useSpaceStore()
@@ -36,6 +38,8 @@ const incomeForm = reactive({
   recurrence: 'monthly',
   month: dayjs().format('YYYY-MM'),
 })
+const userCurrencyCode = ref('ARS')
+const amountPlaceholder = computed(() => (userCurrencyCode.value === 'USD' ? '0.00' : '0,00'))
 
 const totalExpensesThisMonth = computed(() => financeStore.dashboard?.totalSpent || 0)
 const walletHealth = computed(() => walletStore.financialHealth(totalExpensesThisMonth.value))
@@ -72,7 +76,7 @@ function editIncome(income) {
   Object.assign(incomeForm, {
     id: income.id,
     description: income.description,
-    amount: income.amount,
+    amount: formatCurrency(income.amount, userCurrencyCode.value),
     expected_day: income.expected_day || 1,
     status: income.status || 'pending',
     recurrence: 'monthly',
@@ -86,16 +90,36 @@ function cancelIncome() {
   showIncomeForm.value = false
 }
 
+function handleIncomeAmountInput(event) {
+  incomeForm.amount = formatCurrency(event?.target?.value || '', userCurrencyCode.value)
+}
+
+async function loadUserCurrency() {
+  try {
+    const profile = await getOrCreateProfile()
+    userCurrencyCode.value = profile?.currency_code === 'USD' ? 'USD' : 'ARS'
+  } catch {
+    userCurrencyCode.value = 'ARS'
+  }
+}
+
+watch(userCurrencyCode, () => {
+  if (!incomeForm.amount) return
+  incomeForm.amount = formatCurrency(incomeForm.amount, userCurrencyCode.value)
+})
+
 async function submitIncome() {
   const desc = incomeForm.description.trim()
+  const parsedAmount = parseCurrency(incomeForm.amount, userCurrencyCode.value)
   if (!desc) { incomeError.value = 'El detalle es requerido'; return }
-  if (!incomeForm.amount || Number(incomeForm.amount) <= 0) { incomeError.value = 'Ingresá un monto válido'; return }
+  if (Number.isNaN(parsedAmount) || parsedAmount <= 0) { incomeError.value = 'Ingresá un monto válido'; return }
   if (!incomeForm.month) { incomeError.value = 'Seleccioná el mes del ingreso'; return }
   incomeLoading.value = true
   incomeError.value = ''
   try {
     await walletStore.upsertIncome({
       ...incomeForm,
+      amount: parsedAmount,
       recurrence: 'monthly',
       month: incomeForm.month,
     })
@@ -182,7 +206,10 @@ function handleClickOutside(e) {
   }
 }
 
-onMounted(() => document.addEventListener('click', handleClickOutside))
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+  loadUserCurrency()
+})
 onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
 
 function openNewCategory() {
@@ -789,10 +816,11 @@ watch(
             <div class="form-field">
               <label>Monto</label>
               <input
-                v-model="incomeForm.amount"
-                type="number"
-                min="0"
-                placeholder="0"
+                :value="incomeForm.amount"
+                type="text"
+                inputmode="decimal"
+                :placeholder="amountPlaceholder"
+                @input="handleIncomeAmountInput"
                 @keydown.escape="cancelIncome"
               />
             </div>

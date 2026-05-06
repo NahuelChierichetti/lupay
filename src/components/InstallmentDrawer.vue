@@ -1,6 +1,8 @@
 <script setup>
 import { reactive, watch, computed, ref } from 'vue'
 import { Icon } from '@iconify/vue'
+import { getOrCreateProfile } from '../services/profileService'
+import { formatCurrency, parseCurrency } from '../utils/Helpers'
 import dayjs from 'dayjs'
 
 const props = defineProps({
@@ -45,6 +47,8 @@ function defaultForm() {
 const form = reactive(defaultForm())
 const autoTotalAmount = ref(true)
 const isRecurring = ref(false)
+const userCurrencyCode = ref('ARS')
+const amountPlaceholder = computed(() => (userCurrencyCode.value === 'USD' ? '0.00' : '0,00'))
 
 const isEdit = computed(() => Boolean(form.id))
 
@@ -53,10 +57,20 @@ function dateToMonth(dateStr) {
   return dayjs(dateStr).format('YYYY-MM')
 }
 
+async function loadUserCurrency() {
+  try {
+    const profile = await getOrCreateProfile()
+    userCurrencyCode.value = profile?.currency_code === 'USD' ? 'USD' : 'ARS'
+  } catch {
+    userCurrencyCode.value = 'ARS'
+  }
+}
+
 watch(
   () => props.open,
   (open) => {
     if (!open) return
+    loadUserCurrency()
     const base = defaultForm()
     if (props.installment) {
       const recurring = props.installment.total_installments == null
@@ -67,6 +81,8 @@ watch(
         start_installment: props.installment.start_installment ?? 1,
         total_installments: recurring ? 12 : (props.installment.total_installments ?? 12),
       })
+      form.installment_amount = formatCurrency(form.installment_amount, userCurrencyCode.value)
+      form.total_amount = recurring ? '' : formatCurrency(form.total_amount, userCurrencyCode.value)
       autoTotalAmount.value = false
     } else {
       Object.assign(form, base)
@@ -85,18 +101,25 @@ watch(
 
 const computedTotal = computed(() => {
   if (isRecurring.value) return ''
-  const amount = Number(form.installment_amount)
+  const amount = parseCurrency(form.installment_amount, userCurrencyCode.value)
   const count = Number(form.total_installments)
-  if (!amount || !count) return ''
+  if (Number.isNaN(amount) || !count) return ''
   return Number((amount * count).toFixed(2))
 })
 
 watch(computedTotal, (val) => {
-  if (autoTotalAmount.value && !isRecurring.value) form.total_amount = val
+  if (autoTotalAmount.value && !isRecurring.value) {
+    form.total_amount = val === '' ? '' : formatCurrency(String(val), userCurrencyCode.value)
+  }
 })
 
-function onTotalAmountInput() {
+function handleInstallmentAmountInput(event) {
+  form.installment_amount = formatCurrency(event?.target?.value || '', userCurrencyCode.value)
+}
+
+function onTotalAmountInput(event) {
   autoTotalAmount.value = false
+  form.total_amount = formatCurrency(event?.target?.value || '', userCurrencyCode.value)
 }
 
 const endMonthDisplay = computed(() => {
@@ -115,26 +138,30 @@ function normalizeStartInstallment(value) {
 }
 
 function submit() {
+  const parsedInstallmentAmount = parseCurrency(form.installment_amount, userCurrencyCode.value)
+  if (Number.isNaN(parsedInstallmentAmount)) return
+
   if (isRecurring.value) {
     emit('save', {
       ...form,
       start_date: form.start_month ? `${form.start_month}-01` : dayjs().format('YYYY-MM-01'),
       total_installments: null,
       total_amount: null,
-      installment_amount: Number(form.installment_amount),
+      installment_amount: parsedInstallmentAmount,
       start_installment: 1,
     })
     return
   }
 
-  const totalAmount = autoTotalAmount.value ? computedTotal.value : Number(form.total_amount)
+  const parsedTotalAmount = parseCurrency(form.total_amount, userCurrencyCode.value)
+  const totalAmount = autoTotalAmount.value ? computedTotal.value : parsedTotalAmount
   const safeStartInstallment = normalizeStartInstallment(form.start_installment)
 
   emit('save', {
     ...form,
     start_date: form.start_month ? `${form.start_month}-01` : dayjs().format('YYYY-MM-01'),
     total_amount: Number(totalAmount),
-    installment_amount: Number(form.installment_amount),
+    installment_amount: parsedInstallmentAmount,
     total_installments: Number(form.total_installments),
     start_installment: safeStartInstallment,
   })
@@ -199,13 +226,13 @@ function submit() {
               <div class="input-prefix-wrap">
                 <span class="input-prefix">$</span>
                 <input
-                  v-model.number="form.installment_amount"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="0"
+                  :value="form.installment_amount"
+                  type="text"
+                  inputmode="decimal"
+                  :placeholder="amountPlaceholder"
                   class="input-prefixed"
                   required
+                  @input="handleInstallmentAmountInput"
                 />
               </div>
             </div>
@@ -239,11 +266,10 @@ function submit() {
             <div class="input-prefix-wrap">
               <span class="input-prefix">$</span>
               <input
-                v-model.number="form.total_amount"
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="0"
+                :value="form.total_amount"
+                type="text"
+                inputmode="decimal"
+                :placeholder="amountPlaceholder"
                 class="input-prefixed"
                 :readonly="autoTotalAmount"
                 :class="{ 'input-auto': autoTotalAmount }"

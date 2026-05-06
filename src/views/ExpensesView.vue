@@ -1290,6 +1290,16 @@ function sortLabel(field) {
     flex: 1 1 50%;
     width: 50%;
   }
+
+  .expenses-table {
+    width: max-content;
+    min-width: 100%;
+  }
+
+  .expenses-table th,
+  .expenses-table td {
+    white-space: nowrap;
+  }
 }
 
 @keyframes spin {
@@ -1378,6 +1388,7 @@ function sortLabel(field) {
   font-family: var(--font-body);
   font-size: 0.78rem;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .category-badge--multi {

@@ -419,8 +419,12 @@ create policy "categories by user" on categories
 alter table financial_goals
   add column if not exists space_id uuid references spaces(id) on delete cascade;
 
--- Update goals RLS: owner + space members can read space goals
+-- Update goals RLS: owner + members can read; owner/editor can manage shared goals
 drop policy if exists "goals by user" on financial_goals;
+drop policy if exists "goals insert by user or space editor" on financial_goals;
+drop policy if exists "goals update by user" on financial_goals;
+drop policy if exists "goals delete by user" on financial_goals;
+
 create policy "goals by user" on financial_goals
   for select using (
     user_id = auth.uid()
@@ -431,13 +435,33 @@ create policy "goals insert by user or space editor" on financial_goals
     user_id = auth.uid()
     and (
       space_id is null
-      or is_space_member(space_id)
+      or exists (select 1 from spaces s where s.id = financial_goals.space_id and s.owner_id = auth.uid())
+      or exists (select 1 from space_members sm where sm.space_id = financial_goals.space_id and sm.user_id = auth.uid() and sm.role = 'editor')
     )
   );
-create policy "goals update by user" on financial_goals
-  for update using (user_id = auth.uid());
-create policy "goals delete by user" on financial_goals
-  for delete using (user_id = auth.uid());
+create policy "goals update by user or space editor" on financial_goals
+  for update using (
+    user_id = auth.uid()
+    or (space_id is not null and (
+      exists (select 1 from spaces s where s.id = financial_goals.space_id and s.owner_id = auth.uid())
+      or exists (select 1 from space_members sm where sm.space_id = financial_goals.space_id and sm.user_id = auth.uid() and sm.role = 'editor')
+    ))
+  )
+  with check (
+    user_id = auth.uid()
+    or (space_id is not null and (
+      exists (select 1 from spaces s where s.id = financial_goals.space_id and s.owner_id = auth.uid())
+      or exists (select 1 from space_members sm where sm.space_id = financial_goals.space_id and sm.user_id = auth.uid() and sm.role = 'editor')
+    ))
+  );
+create policy "goals delete by user or space editor" on financial_goals
+  for delete using (
+    user_id = auth.uid()
+    or (space_id is not null and (
+      exists (select 1 from spaces s where s.id = financial_goals.space_id and s.owner_id = auth.uid())
+      or exists (select 1 from space_members sm where sm.space_id = financial_goals.space_id and sm.user_id = auth.uid() and sm.role = 'editor')
+    ))
+  );
 
 
 -- 11. SECURITY DEFINER function: accept_space_invite

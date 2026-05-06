@@ -6,6 +6,7 @@ import { goalCurrency } from '../../utils/finance'
 
 const props = defineProps({
   goals: { type: Array, default: () => [] },
+  canToggleGoal: { type: Function, default: () => false },
 })
 
 const emit = defineEmits(['toggle-period'])
@@ -158,7 +159,8 @@ function getFireEmojis(streak) {
             :key="period.key"
             type="button"
             :class="['goals-streak-period', { 'goals-streak-period--achieved': period.achieved, 'goals-streak-period--current': period.isCurrent }]"
-            @click="$emit('toggle-period', { goalId: goal.id, periodKey: period.key })"
+            :disabled="!props.canToggleGoal(goal)"
+            @click="props.canToggleGoal(goal) && $emit('toggle-period', { goalId: goal.id, periodKey: period.key })"
             :title="period.label"
           >
             <span class="goals-streak-period__dot">

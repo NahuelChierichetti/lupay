@@ -4,10 +4,14 @@ import { Icon } from '@iconify/vue'
 import GoalForm from '../components/forms/GoalForm.vue'
 import GoalStreakSection from '../components/goals/GoalStreakSection.vue'
 import { useFinanceStore } from '../store/useFinanceStore'
+import { useAuthStore } from '../store/useAuthStore'
+import { useSpaceStore } from '../store/useSpaceStore'
 import { goalCurrency } from '../utils/finance'
 import dayjs from 'dayjs'
 
 const store = useFinanceStore()
+const authStore = useAuthStore()
+const spaceStore = useSpaceStore()
 const showForm = ref(false)
 const editing = ref(null)
 const openMenuId = ref(null)
@@ -33,6 +37,20 @@ const regularGoals = computed(() =>
 const completedGoals = computed(() =>
   goals.value.filter((g) => g.status === 'completed'),
 )
+
+const currentUserId = computed(() => authStore.user?.id || null)
+const canEdit = computed(() => {
+  if (!spaceStore.currentSpaceId) return true
+  const space = spaceStore.spaces.find((s) => s.id === spaceStore.currentSpaceId)
+  if (!space) return false
+  return space.isOwner === true || space.memberRole === 'editor'
+})
+
+function canManageGoal(goal) {
+  if (!goal) return false
+  if (spaceStore.currentSpaceId) return canEdit.value
+  return goal.user_id === currentUserId.value
+}
 
 // ── Progress helper ──
 function progress(goal) {
@@ -77,6 +95,7 @@ function createGoal() {
 }
 
 function editGoal(goal) {
+  if (!canManageGoal(goal)) return
   editing.value = { ...goal }
   showForm.value = true
   openMenuId.value = null
@@ -89,6 +108,8 @@ async function save(goal) {
 }
 
 async function deleteGoal(id) {
+  const goal = goals.value.find((item) => item.id === id)
+  if (!canManageGoal(goal)) return
   openMenuId.value = null
   await store.deleteGoal(id)
 }
@@ -139,11 +160,12 @@ async function handleTogglePeriod({ goalId, periodKey }) {
               <span class="display-sm">{{ Math.round(progress(heroGoal)) }}%</span>
               <span class="label-sm">COMPLETADO</span>
             </div>
-            <button class="btn-icon goals-card__menu" @click.stop="toggleMenu(heroGoal.id)">
-              <Icon icon="tabler:dots-vertical" :width="18" />
-            </button>
-            <Transition name="fade">
-              <div v-if="openMenuId === heroGoal.id" class="goals-card__dropdown">
+            <template v-if="canManageGoal(heroGoal)">
+              <button class="btn-icon goals-card__menu" @click.stop="toggleMenu(heroGoal.id)">
+                <Icon icon="tabler:dots-vertical" :width="18" />
+              </button>
+              <Transition name="fade">
+                <div v-if="openMenuId === heroGoal.id" class="goals-card__dropdown">
                 <button class="goals-card__dropdown-item" @click="editGoal(heroGoal)">
                   <Icon icon="tabler:edit" :width="16" /> Editar
                 </button>
@@ -152,6 +174,7 @@ async function handleTogglePeriod({ goalId, periodKey }) {
                 </button>
               </div>
             </Transition>
+            </template>
           </div>
         </div>
 
@@ -180,7 +203,7 @@ async function handleTogglePeriod({ goalId, periodKey }) {
       </article>
 
       <!-- Create CTA Card -->
-      <article class="goals-create-card" @click="createGoal">
+      <article v-if="canEdit" class="goals-create-card" @click="createGoal">
         <span class="goals-create-card__icon">
           <Icon icon="tabler:plus" :width="28" class="text-secondary" />
         </span>
@@ -204,7 +227,7 @@ async function handleTogglePeriod({ goalId, periodKey }) {
             <span v-if="goal.currency" class="badge badge-tertiary" style="font-size: 0.65rem; padding: 0.2rem 0.5rem;">
               {{ currencyBadge[goal.currency] || goal.currency }}
             </span>
-            <button class="btn-icon goals-card__menu" @click.stop="toggleMenu(goal.id)">
+            <button v-if="canManageGoal(goal)" class="btn-icon goals-card__menu" @click.stop="toggleMenu(goal.id)">
               <Icon icon="tabler:dots-vertical" :width="18" />
             </button>
           </div>
@@ -235,6 +258,7 @@ async function handleTogglePeriod({ goalId, periodKey }) {
     <!-- Savings Streak Section -->
     <GoalStreakSection
       :goals="goals"
+      :can-toggle-goal="canManageGoal"
       @toggle-period="handleTogglePeriod"
     />
 

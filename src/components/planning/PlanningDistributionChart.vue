@@ -5,16 +5,31 @@ import { currency } from '../../utils/finance'
 
 const props = defineProps({
   values: { type: Object, required: true },
+  categoryColors: { type: Object, default: () => ({}) },
 })
 
-const palette = ['#BAC3FF', '#44DDC1', '#CDBDFF', '#464652', '#F4C55B', '#FFB4AB']
+const fallbackPalette = ['#BAC3FF', '#44DDC1', '#CDBDFF', '#464652', '#F4C55B', '#FFB4AB']
 
-const categories = computed(() => Object.keys(props.values))
-const amounts = computed(() => Object.values(props.values))
+function normalizeCategoryName(name) {
+  return String(name || '').trim().toLowerCase()
+}
+
+const sortedEntries = computed(() =>
+  Object.entries(props.values || {}).sort(([, amountA], [, amountB]) => Number(amountB || 0) - Number(amountA || 0)),
+)
+
+const categories = computed(() => sortedEntries.value.map(([name]) => name))
+const amounts = computed(() => sortedEntries.value.map(([, amount]) => Number(amount || 0)))
 const total = computed(() => amounts.value.reduce((s, v) => s + v, 0))
 
 const percentages = computed(() =>
   amounts.value.map((v) => (total.value > 0 ? Math.round((v / total.value) * 100) : 0)),
+)
+
+const chartColors = computed(() =>
+  categories.value.map(
+    (cat, idx) => props.categoryColors?.[normalizeCategoryName(cat)] || fallbackPalette[idx % fallbackPalette.length],
+  ),
 )
 
 const chartOptions = computed(() => ({
@@ -23,7 +38,7 @@ const chartOptions = computed(() => ({
     background: 'transparent',
     fontFamily: 'Inter, system-ui, sans-serif',
   },
-  colors: palette.slice(0, categories.value.length),
+  colors: chartColors.value,
   labels: categories.value,
   stroke: {
     show: false,
@@ -90,7 +105,7 @@ const chartOptions = computed(() => ({
       <div class="distribution-chart">
         <VueApexCharts
           type="donut"
-          width="220"
+          width="100%"
           :options="chartOptions"
           :series="amounts"
         />
@@ -103,7 +118,7 @@ const chartOptions = computed(() => ({
         >
           <span
             class="distribution-legend__dot"
-            :style="{ background: palette[idx % palette.length] }"
+            :style="{ background: chartColors[idx] }"
           />
           <span class="distribution-legend__name">{{ cat }}</span>
           <strong class="distribution-legend__pct">{{ percentages[idx] }}%</strong>

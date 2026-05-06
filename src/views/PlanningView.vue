@@ -75,6 +75,18 @@ const byCategory = computed(() =>
   }, {}),
 )
 
+function normalizeCategoryName(name) {
+  return String(name || '').trim().toLowerCase()
+}
+
+const distributionCategoryColors = computed(() => {
+  const out = {}
+  for (const [name, color] of Object.entries(store.categoryColorMap || {})) {
+    out[normalizeCategoryName(name)] = color
+  }
+  return out
+})
+
 // ── KPIs ──
 const dailyAvg = computed(() => {
   const { start, end } = periodRange.value
@@ -181,7 +193,7 @@ const insightPeriodLabel = computed(() => {
     <!-- Header -->
     <div class="planning-header">
       <div>
-        <h2 class="label-lg planning-header__overline">Galería de Datos</h2>
+        <h2 class="label-lg planning-header__overline">Estadísticas de tus gastos</h2>
         <p class="body-md planning-header__sub">{{ subtitles[period] }}</p>
       </div>
       <div class="planning-tabs">
@@ -238,7 +250,10 @@ const insightPeriodLabel = computed(() => {
 
     <!-- Bottom Grid: Distribution + Insights -->
     <div class="planning-bottom-grid">
-      <PlanningDistributionChart :values="byCategory" />
+      <PlanningDistributionChart
+        :values="byCategory"
+        :category-colors="distributionCategoryColors"
+      />
 
       <!-- Analysis -->
       <article class="planning-insight-card">

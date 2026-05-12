@@ -344,15 +344,20 @@ alter table expenses
 alter table collaborators
   add column if not exists space_id uuid references spaces(id) on delete cascade;
 
--- Update expense select policy to also allow space members to read
+-- Update expense select policy to also allow space members and space owners to read
 drop policy if exists "expenses select by owner or responsible" on expenses;
 
 create policy "expenses select" on expenses
 for select using (
   auth.uid() = user_id or
   auth.uid() = responsible_user_id or
-  (space_id is not null and exists (
-    select 1 from space_members sm where sm.space_id = expenses.space_id and sm.user_id = auth.uid()
+  (space_id is not null and (
+    exists (
+      select 1 from space_members sm where sm.space_id = expenses.space_id and sm.user_id = auth.uid()
+    )
+    or exists (
+      select 1 from spaces s where s.id = expenses.space_id and s.owner_id = auth.uid()
+    )
   ))
 );
 

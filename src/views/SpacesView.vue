@@ -11,6 +11,7 @@ import {
 } from '../services/spacesService'
 import { useSpaceStore } from '../store/useSpaceStore'
 import { useFinanceStore } from '../store/useFinanceStore'
+import { monthKey } from '../utils/finance'
 
 const router = useRouter()
 const spaceStore = useSpaceStore()
@@ -63,9 +64,7 @@ async function load() {
     spaces.value = list
 
     // Fetch members and monthly totals per space in parallel
-    const now = new Date()
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
-    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString()
+    const currentMonth = monthKey(new Date())
 
     await Promise.all(
       list.map(async (s) => {
@@ -77,7 +76,7 @@ async function load() {
         try {
           const expenses = await listSpaceExpenses(s.id)
           const monthTotal = expenses
-            .filter((e) => e.payment_date >= monthStart && e.payment_date <= monthEnd)
+            .filter((e) => monthKey(e.payment_date) === currentMonth)
             .reduce((sum, e) => sum + (Number(e.amount) || 0), 0)
           spaceMonthly.value[s.id] = monthTotal
         } catch { spaceMonthly.value[s.id] = 0 }

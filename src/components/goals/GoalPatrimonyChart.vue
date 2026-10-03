@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import VueApexCharts from 'vue3-apexcharts'
+import VueApexCharts from '../../lib/apexcharts'
 import { currency } from '../../utils/finance'
 
 const props = defineProps({

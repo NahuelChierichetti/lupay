@@ -10,6 +10,7 @@ PWA con frontend Vue 3 y backend Supabase para gestionar gastos, cuotas, ingreso
    - `cp .env.example .env`
    - `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`
    - `VITE_ENABLE_INVITE_EMAIL` (`true` para enviar invitaciones por email vía la Edge Function `send-invite`)
+   - `VITE_VAPID_PUBLIC_KEY` (clave pública VAPID para notificaciones push)
 2. `npm install`
 3. `npm run dev`
 
@@ -30,6 +31,22 @@ Sin variables de Supabase la app levanta y omite la autenticación, pero funcion
   npx supabase functions deploy send-invite
   ```
 
+## Notificaciones push
+
+Web Push con claves VAPID: un service worker propio (`src/sw.js`), la tabla `push_subscriptions` y la Edge Function `send-push`. Cada notificación que se inserta en `notifications` (asignación, cambio de estado, vencimiento) se envía como push a todos los dispositivos del usuario que las activaron en **Mi Perfil**.
+
+Configuración (una sola vez):
+- Correr `supabase/migrations/20261003_push_notifications.sql` en Supabase → SQL Editor (o `npx supabase db push` si el historial de migraciones remoto está al día).
+```bash
+npx web-push generate-vapid-keys            # genera publicKey / privateKey
+npx supabase secrets set VAPID_PUBLIC_KEY=<publicKey> VAPID_PRIVATE_KEY=<privateKey> \
+  VAPID_SUBJECT=mailto:<tu-email> PUSH_WEBHOOK_SECRET=<string-aleatorio>
+npx supabase functions deploy send-push --no-verify-jwt
+```
+- Dashboard de Supabase → Database → Webhooks: webhook `INSERT` en `public.notifications` → Edge Function `send-push`, con header `x-webhook-secret: <PUSH_WEBHOOK_SECRET>`.
+- Vercel y `.env`: `VITE_VAPID_PUBLIC_KEY=<publicKey>`.
+- En iPhone solo funciona con LUPAY instalada en la pantalla de inicio (iOS 16.4+). En Android funciona desde Chrome.
+
 ## Flujo de trabajo
 
 - `main`: producción. `develop`: integración.
@@ -44,7 +61,7 @@ Sin variables de Supabase la app levanta y omite la autenticación, pero funcion
 - **Planificación:** tendencia temporal, distribución por categoría, simulador de escenarios e insights de ahorro.
 - **Objetivos:** metas con progreso, rachas y evolución de patrimonio.
 - **Configuración:** ingresos (wallet), colaboradores y miembros del espacio.
-- **PWA:** instalable (con instrucciones específicas para iOS) y notificaciones in-app.
+- **PWA:** instalable (con instrucciones específicas para iOS), notificaciones in-app y push.
 
 ## Estructura de carpetas
 

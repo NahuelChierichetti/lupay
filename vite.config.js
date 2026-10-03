@@ -4,6 +4,15 @@ import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  optimizeDeps: {
+    include: [
+      'apexcharts/core',
+      'apexcharts/area',
+      'apexcharts/donut',
+      'apexcharts/features/legend',
+      'apexcharts/features/annotations',
+    ],
+  },
   plugins: [
     vue(),
     tailwindcss(),

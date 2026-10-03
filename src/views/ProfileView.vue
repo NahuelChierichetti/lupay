@@ -7,6 +7,7 @@ import { useFinanceStore } from '../store/useFinanceStore'
 import { useAuthStore } from '../store/useAuthStore'
 import { useNotificationStore } from '../store/useNotificationStore'
 import { listMyInvitations, acceptInvite, rejectInvite } from '../services/collaboratorService'
+import { getPushStatus, enablePush, disablePush } from '../services/pushService'
 import { Icon } from '@iconify/vue'
 import dayjs from 'dayjs'
 import 'dayjs/locale/es'
@@ -44,6 +45,43 @@ const userInitial = computed(() => {
   }
   return (form.email || 'U')[0].toUpperCase()
 })
+
+// ── Push notifications (per device) ──────────────────────────────────────────
+const pushStatus = ref('unsupported')
+const pushLoading = ref(false)
+const pushError = ref('')
+
+const PUSH_STATUS_TEXT = {
+  enabled: 'Activadas en este dispositivo.',
+  disabled: 'Desactivadas en este dispositivo.',
+  denied: 'Bloqueaste las notificaciones para LUPAY. Habilitalas desde la configuración del navegador (ícono del candado → Notificaciones).',
+  'needs-install': 'En iPhone primero agregá LUPAY a la pantalla de inicio (Compartir → Agregar a inicio) y abrila desde ahí.',
+  unsupported: 'Este navegador no soporta notificaciones push.',
+}
+
+async function refreshPushStatus() {
+  try {
+    pushStatus.value = await getPushStatus()
+  } catch {
+    pushStatus.value = 'unsupported'
+  }
+}
+
+async function togglePush() {
+  pushLoading.value = true
+  pushError.value = ''
+  try {
+    pushStatus.value = pushStatus.value === 'enabled'
+      ? await disablePush()
+      : await enablePush(auth.user?.id)
+  } catch (err) {
+    pushError.value = err.message || 'No se pudieron actualizar las notificaciones.'
+  } finally {
+    pushLoading.value = false
+  }
+}
+
+onMounted(refreshPushStatus)
 
 onMounted(async () => {
   loading.value = true
@@ -275,6 +313,37 @@ async function confirmDeactivate() {
           </li>
         </ul>
       </aside>
+
+      <!-- ── Push notifications card (full width) ──────────────────── -->
+      <div class="card card-full security-card">
+        <div class="security-info">
+          <div class="section-title-row">
+            <Icon icon="tabler:bell-ringing" width="20" height="20" />
+            <h3>Notificaciones push</h3>
+          </div>
+          <p class="section-desc">
+            Recibí un aviso en este dispositivo cuando te asignen un gasto o cambie el estado de un gasto asignado.
+          </p>
+        </div>
+
+        <div class="security-form w-full">
+          <p class="push-status" :class="`push-status--${pushStatus}`">
+            <Icon :icon="pushStatus === 'enabled' ? 'tabler:circle-check' : 'tabler:info-circle'" width="16" height="16" />
+            {{ PUSH_STATUS_TEXT[pushStatus] }}
+          </p>
+          <p v-if="pushError" class="msg-error">{{ pushError }}</p>
+
+          <div v-if="pushStatus === 'enabled' || pushStatus === 'disabled'" class="form-actions">
+            <button
+              :class="pushStatus === 'enabled' ? 'btn-ghost' : 'btn-primary'"
+              :disabled="pushLoading"
+              @click="togglePush"
+            >
+              {{ pushLoading ? 'Procesando...' : pushStatus === 'enabled' ? 'Desactivar' : 'Activar notificaciones' }}
+            </button>
+          </div>
+        </div>
+      </div>
 
       <!-- ── Password card (full width) ────────────────────────────── -->
       <div class="card card-full security-card">
@@ -721,6 +790,16 @@ async function confirmDeactivate() {
   flex-direction: column;
   gap: 1rem;
 }
+
+.push-status {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--color-on-surface-muted);
+}
+.push-status--enabled { color: #44DDC1; }
 
 /* ── Danger zone ──────────────────────────────────────────────────────────── */
 .danger-zone {

@@ -46,7 +46,7 @@ const filteredExpenses = computed(() => {
   const { start, end } = periodRange.value
   return store.expenses.filter((e) => {
     const d = dayjs(e.payment_date)
-    return d.isAfter(start.subtract(1, 'day')) && d.isBefore(end.add(1, 'day'))
+    return !d.isBefore(start, 'day') && !d.isAfter(end, 'day')
   })
 })
 
@@ -54,7 +54,7 @@ const previousExpenses = computed(() => {
   const { start, end } = previousRange.value
   return store.expenses.filter((e) => {
     const d = dayjs(e.payment_date)
-    return d.isAfter(start.subtract(1, 'day')) && d.isBefore(end.add(1, 'day'))
+    return !d.isBefore(start, 'day') && !d.isAfter(end, 'day')
   })
 })
 

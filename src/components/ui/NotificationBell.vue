@@ -14,6 +14,8 @@ const open = ref(false)
 const panelRef = ref(null)
 const bellRef = ref(null)
 
+const STATUS_LABELS = { pending: 'Pendiente', paid: 'Pagado', overdue: 'Vencido' }
+
 const TYPE_CONFIG = {
   due_soon: {
     label: 'Vence mañana',
@@ -26,6 +28,12 @@ const TYPE_CONFIG = {
     icon: 'user',
     color: '#BAC3FF',
     bg: 'rgba(186, 195, 255, 0.12)',
+  },
+  status_change: {
+    label: 'Cambió el estado de un gasto',
+    icon: 'refresh',
+    color: '#44DDC1',
+    bg: 'rgba(68, 221, 193, 0.12)',
   },
   invite: {
     label: 'Invitacion pendiente',
@@ -80,6 +88,9 @@ function getExpenseLabel(notif) {
   const desc = notif.expenses?.description
   const date = notif.expenses?.payment_date ? dayjs(notif.expenses.payment_date).format('DD/MM/YYYY') : ''
   if (!desc) return ''
+  if (notif.type === 'status_change' && notif.meta?.to) {
+    return `${desc} · ${STATUS_LABELS[notif.meta.to] || notif.meta.to}`
+  }
   return date ? `${desc} · ${date}` : desc
 }
 
@@ -151,6 +162,10 @@ onUnmounted(() => document.removeEventListener('mousedown', handleClickOutside))
               <!-- User icon for assignment -->
               <svg v-else-if="n.type === 'assignment'" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
+              </svg>
+
+              <svg v-else-if="n.type === 'status_change'" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12" />
               </svg>
 
               <svg v-else-if="n.type === 'space_invite'" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

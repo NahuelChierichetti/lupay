@@ -43,6 +43,12 @@ const showSpaceMenu = ref(false)
 
 async function syncWorkspaceState() {
   await spaceStore.bootstrap()
+  // Deep link from a push notification: /gastos?space=<id>
+  const linkedSpace = route.query.space
+  if (linkedSpace && spaceStore.spaces.some((s) => s.id === linkedSpace)) {
+    spaceStore.setSpace(linkedSpace)
+    router.replace({ query: { ...route.query, space: undefined } })
+  }
   if (!spaceStore.currentSpaceId) {
     await notifStore.bootstrap(auth.user?.id, [], auth.user?.email)
     if (route.name !== 'espacios' && route.name !== 'perfil') {
@@ -57,6 +63,10 @@ async function syncWorkspaceState() {
 onMounted(async () => {
   await syncWorkspaceState()
   window.addEventListener('focus', syncWorkspaceState)
+})
+
+watch(() => route.query.space, (space) => {
+  if (space && space !== spaceStore.currentSpaceId) syncWorkspaceState()
 })
 
 onUnmounted(() => {

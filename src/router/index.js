@@ -45,4 +45,34 @@ router.beforeEach(async (to) => {
   return true
 })
 
+// After a new deploy, a cached index.html can reference route chunks that no
+// longer exist. Reload once so the app picks up the new build instead of
+// silently failing navigation.
+const RELOAD_KEY = 'lupay:chunk-reload'
+
+function isChunkLoadError(error) {
+  return /Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module|Expected a JavaScript/i
+    .test(String(error?.message || error))
+}
+
+function reloadOnce(url) {
+  try {
+    const last = Number(sessionStorage.getItem(RELOAD_KEY) || 0)
+    if (Date.now() - last < 10_000) return false
+    sessionStorage.setItem(RELOAD_KEY, String(Date.now()))
+  } catch {
+    // sessionStorage unavailable: reload anyway
+  }
+  window.location.assign(url)
+  return true
+}
+
+router.onError((error, to) => {
+  if (isChunkLoadError(error)) reloadOnce(to?.fullPath || window.location.href)
+})
+
+window.addEventListener('vite:preloadError', (event) => {
+  if (reloadOnce(window.location.href)) event.preventDefault()
+})
+
 export default router

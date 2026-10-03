@@ -36,9 +36,9 @@ Sin variables de Supabase la app levanta y omite la autenticación, pero funcion
 Web Push con claves VAPID: un service worker propio (`src/sw.js`), la tabla `push_subscriptions` y la Edge Function `send-push`. Cada notificación que se inserta en `notifications` (asignación, cambio de estado, vencimiento) se envía como push a todos los dispositivos del usuario que las activaron en **Mi Perfil**.
 
 Configuración (una sola vez):
+- Correr `supabase/migrations/20261003_push_notifications.sql` en Supabase → SQL Editor (o `npx supabase db push` si el historial de migraciones remoto está al día).
 ```bash
 npx web-push generate-vapid-keys            # genera publicKey / privateKey
-npx supabase db push                        # aplica la migración 20261003_push_notifications.sql
 npx supabase secrets set VAPID_PUBLIC_KEY=<publicKey> VAPID_PRIVATE_KEY=<privateKey> \
   VAPID_SUBJECT=mailto:<tu-email> PUSH_WEBHOOK_SECRET=<string-aleatorio>
 npx supabase functions deploy send-push --no-verify-jwt

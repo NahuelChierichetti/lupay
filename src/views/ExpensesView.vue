@@ -179,6 +179,13 @@ const filteredExpenses = computed(() => {
   })
 })
 
+const hasActiveFilters = computed(() =>
+  Boolean(appliedFilters.name.trim() || appliedFilters.status || appliedFilters.category || appliedFilters.startDate || appliedFilters.endDate),
+)
+const filteredTotal = computed(() =>
+  filteredExpenses.value.reduce((sum, e) => sum + Number(e.amount || 0), 0),
+)
+
 async function applyFilters() {
   filterLoading.value = true
   await nextTick()
@@ -513,6 +520,13 @@ function sortLabel(field) {
       <div>
         <h2 class="page-title">Gastos</h2>
         <p class="page-subtitle">{{ visibleExpenses.length }} gasto{{ visibleExpenses.length !== 1 ? 's' : '' }} registrado{{ visibleExpenses.length !== 1 ? 's' : '' }}</p>
+        <div class="expenses-total" :class="{ 'expenses-total--filtered': hasActiveFilters }">
+          <span class="expenses-total__label">{{ hasActiveFilters ? 'Total filtrado' : 'Total del mes' }}</span>
+          <span class="expenses-total__amount">{{ currency(filteredTotal) }}</span>
+          <span v-if="hasActiveFilters" class="expenses-total__hint">
+            {{ filteredExpenses.length }} de {{ visibleExpenses.length }} gastos
+          </span>
+        </div>
       </div>
       <div class="header-actions">
         <div v-if="filterableMembers.length" class="assignees-filter" aria-label="Filtrar por responsable">
@@ -1039,6 +1053,36 @@ function sortLabel(field) {
   font-size: 0.875rem;
   color: var(--color-on-surface-muted);
   margin: 4px 0 0;
+}
+
+.expenses-total {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-top: 10px;
+}
+.expenses-total__label {
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-on-surface-muted);
+}
+.expenses-total__amount {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--color-on-surface);
+}
+.expenses-total--filtered .expenses-total__amount {
+  color: var(--color-primary);
+}
+.expenses-total__hint {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  color: var(--color-on-surface-muted);
 }
 
 .header-actions {

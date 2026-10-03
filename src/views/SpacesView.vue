@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import {
@@ -20,6 +20,9 @@ const financeStore = useFinanceStore()
 const spaces = ref([])
 const spaceMembers = ref({})   // { spaceId: [{ user_id, email, full_name }] }
 const spaceMonthly = ref({})   // { spaceId: number }
+const totalMonthly = computed(() =>
+  Object.values(spaceMonthly.value).reduce((sum, n) => sum + (Number(n) || 0), 0),
+)
 const loading = ref(true)
 const error = ref('')
 
@@ -176,6 +179,11 @@ function formatCurrency(n) {
         <p class="page-subtitle">
           Cada espacio mantiene su propia lógica de gastos, estadísticas y objetivos independientes.
         </p>
+      </div>
+      <div v-if="!loading && spaces.length" class="spaces-total">
+        <span class="monthly-label">Gasto mensual total</span>
+        <span class="spaces-total__amount">{{ formatCurrency(totalMonthly) }}</span>
+        <span class="spaces-total__hint">{{ spaces.length }} espacio{{ spaces.length !== 1 ? 's' : '' }}</span>
       </div>
     </div>
 
@@ -681,6 +689,33 @@ function formatCurrency(n) {
   gap: 2px;
 }
 
+.spaces-total {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: var(--color-surface-container);
+  border: 1px solid var(--color-outline-variant);
+}
+.spaces-total__amount {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-on-surface);
+  line-height: 1.2;
+}
+.spaces-total__hint {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  color: var(--color-on-surface-muted);
+}
+@media (max-width: 640px) {
+  .page-header { flex-direction: column; }
+  .spaces-total { align-items: flex-start; width: 100%; box-sizing: border-box; }
+}
 .monthly-label {
   font-family: var(--font-body);
   font-size: 0.65rem;
